@@ -77,6 +77,14 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
   border-radius: 20px; padding: 3px 11px; margin-bottom: 12px;
 }
 .card p { margin-bottom: 12px; }
+
+/* Cards carrying a screenshot: text left, phone shot right; stacks on narrow screens. */
+.card.shot { display: grid; grid-template-columns: 1fr 168px; gap: 26px; align-items: center; }
+.card.shot .card-body > :first-child { margin-top: 0; }
+.shot-img {
+  width: 100%; height: auto; display: block;
+  border: 1px solid var(--line); border-radius: 12px;
+}
 .links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 16px; }
 .links a { font-size: 15px; }
 
@@ -97,6 +105,8 @@ footer.site a:hover { color: var(--accent); }
 footer.site .legal { margin-top: 6px; }
 
 @media (max-width: 560px) {
+  .card.shot { grid-template-columns: 1fr; gap: 20px; }
+  .card.shot .shot-img { max-width: 190px; margin: 0 auto; }
   body { font-size: 16px; }
   h1 { font-size: 26px; }
   nav.site a { margin-left: 14px; }
