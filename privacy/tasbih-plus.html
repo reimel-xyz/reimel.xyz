@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="canonical" href="https://reimel.xyz/privacy/tasbih-plus.html">
 <title>Tasbih+ &middot; Privacy Policy &middot; Reimel Ltd</title>
-<meta name="description" content="Privacy policy for Tasbih+ by Reimel Ltd. Works offline; location is used only on your device for prayer times and Qibla; nothing is transmitted.">
+<meta name="description" content="Privacy policy for Tasbih+ by Reimel Ltd. Works offline; location is used only on your device for prayer times and Qibla; the only network use is Google Play Billing for a voluntary tip.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../style.css">
 </head>
@@ -35,9 +35,10 @@
     or to anyone else.</strong></p>
 
     <h2>Data we collect or transmit: none</h2>
-    <p>Tasbih+ has <strong>no user accounts and no servers</strong>. It requests no Internet permission and makes
-    no network connections of its own. It contains <strong>no analytics, no advertising, and no tracking</strong>
-    of any kind. Everything you do, your dhikr counts, settings, prayer-tracking log, Quran reading
+    <p>Tasbih+ has <strong>no user accounts and no servers</strong>, and <strong>makes no network connections of
+    its own</strong>: it contains no code that sends or fetches anything. The only network access it can use
+    belongs to Google Play, described under <a href="#internet">Internet access</a> below. It contains
+    <strong>no analytics, no advertising, and no tracking</strong> of any kind. Everything you do, your dhikr counts, settings, prayer-tracking log, Quran reading
     position and favourites, and any Zakat calculations you save, is stored <strong>only on your device</strong>
     and is deleted when you uninstall the app.</p>
 
@@ -71,8 +72,21 @@
       <li><strong>Foreground service (media playback)</strong>, to play the prayer tone so it can finish and be stopped.</li>
       <li><strong>Full-screen intent</strong>, to show the prayer alarm over the lock screen (optional).</li>
       <li><strong>Approximate &amp; precise location</strong>, optional; used on-device only for prayer times and Qibla, as described above.</li>
+      <li><strong>Internet</strong> and <strong>network state</strong>, required by Google Play Billing for the optional tip, as described below. No dhikr, prayer, Quran or Zakat data is transmitted.</li>
+      <li><strong>Billing</strong>, lets Google Play process a voluntary tip if you choose to leave one.</li>
     </ul>
-    <p>The app requests no Internet, contacts, storage, microphone, camera, or advertising permissions.</p>
+    <p>The app requests no contacts, storage, microphone, camera, or advertising permissions.</p>
+
+    <h2 id="internet">Internet access, and why the app has it</h2>
+    <p>Tasbih+ is free, with no paywall and no gated features. It offers an entirely voluntary
+    <strong>tip</strong>, and to accept one it includes Google Play Billing. That library is the reason the app
+    declares <code>android.permission.INTERNET</code>, <code>android.permission.ACCESS_NETWORK_STATE</code> and
+    <code>com.android.vending.BILLING</code>.</p>
+    <p>The only outbound traffic the app can generate is Google Play handling a tip, if you choose to leave
+    one. Payment is handled entirely by Google Play, which does not share your name, email address or payment
+    details with us. Google&rsquo;s own privacy policy covers that transaction:
+    <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>. Your location, prayer log
+    and everything else stay on your device.</p>
 
     <h2>Backup and sharing (you choose)</h2>
     <p>You can export your settings/counts to a file and import it later. This file is created only when you
