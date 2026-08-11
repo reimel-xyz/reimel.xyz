@@ -87,4 +87,10 @@ Footer on every page (one line): `© 2026 Reimel Ltd · Registered in England an
 4. Ensure each app's **Data Safety** form matches its policy AND its manifest (Tasbih+: location used but
    *not collected/shared*; PropDeck: purchases via Google Play).
 
-**Keep the old Google Sites page up** until Play verification succeeds on the new domain.
+**The old Google Sites page is gone.** `sites.google.com/view/reimel` (and its `/privacy-policy`,
+`/officecalc-privacy`, `/app-keeper-privacy`, `/dictionary-privacy` sub-pages) was deleted on
+11-08-26, once Play verification had long since succeeded and every live listing pointed here
+instead. Verified at the time: the only source still referencing it was the retired `TasbihApp`,
+and of the legacy packages only `com.albo.tasbih` (Tasbih+) is published, with its in-app link
+already on `reimel.xyz`. 🚨 Every app policy now lives ONLY in this repo under `privacy/`, so those
+URLs are the single point of failure for the Play listings: never rename or move one.
