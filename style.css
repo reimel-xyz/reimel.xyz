@@ -1,14 +1,34 @@
-/* Reimel Ltd — shared styles. Deliberately plain, fast, no external requests. */
+/* Reimel Ltd - shared styles. Deliberately plain, fast, no external requests. */
 :root {
-  --ink: #1b2230;
+  --ink: #18202e;
   --body: #38414f;
   --muted: #6a7280;
   --accent: #2d4a7c;
   --accent-dark: #1f3557;
+  --accent-soft: #eef2f8;
   --line: #e4e7ec;
   --bg: #ffffff;
   --bg-soft: #f7f8fa;
-  --max: 760px;
+  --btn-bg: #2d4a7c;
+  --btn-ink: #ffffff;
+  --btn-bg-hover: #1f3557;
+  --max: 920px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #edf1f7;
+    --body: #c4cbd7;
+    --muted: #8e96a5;
+    --accent: #93b4e4;
+    --accent-dark: #b7cdf0;
+    --accent-soft: #223048;
+    --line: #2a3342;
+    --bg: #131823;
+    --bg-soft: #1a202c;
+    --btn-bg: #93b4e4;
+    --btn-ink: #101623;
+    --btn-bg-hover: #b7cdf0;
+  }
 }
 * { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; }
@@ -21,6 +41,7 @@ body {
   font-size: 17px;
 }
 .wrap { max-width: var(--max); margin: 0 auto; padding: 0 20px; }
+.prose { max-width: 760px; }
 
 /* Header */
 header.site {
@@ -33,8 +54,8 @@ header.site .wrap {
 }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
 .brand .logo {
-  width: 30px; height: 30px; border-radius: 7px; background: var(--accent);
-  color: #fff; font-weight: 700; display: grid; place-items: center; font-size: 17px;
+  width: 30px; height: 30px; border-radius: 7px; background: var(--btn-bg);
+  color: var(--btn-ink); font-weight: 700; display: grid; place-items: center; font-size: 17px;
 }
 .brand .name { font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
 nav.site a { color: var(--body); text-decoration: none; margin-left: 20px; font-size: 15px; }
@@ -64,19 +85,40 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
 }
 .meta strong { color: var(--body); }
 
+/* Hero (homepage) */
+.hero { padding: 26px 0 6px; }
+.hero h1 { font-size: 40px; line-height: 1.15; max-width: 640px; }
+.hero .lede { font-size: 20px; max-width: 560px; margin-bottom: 22px; }
+.hero .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
+
+/* "Why our apps are different" strip */
+.strip {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  margin: 36px 0 8px;
+}
+.strip > div {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft);
+  padding: 16px 14px; text-align: center;
+}
+.strip strong { display: block; color: var(--ink); font-size: 15.5px; }
+.strip span { display: block; color: var(--muted); font-size: 13.5px; margin-top: 3px; line-height: 1.45; }
+
 /* Cards (apps page) */
 .cards { display: grid; gap: 18px; margin: 8px 0 10px; }
 .card {
-  border: 1px solid var(--line); border-radius: 12px; padding: 22px 24px;
+  border: 1px solid var(--line); border-radius: 14px; padding: 24px 26px;
   background: var(--bg);
 }
-.card h2 { margin-top: 0; }
+.card h2 { margin-top: 0; margin-bottom: 0; }
 .card .tag {
   display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
-  text-transform: uppercase; color: var(--accent); background: #eef2f8;
+  text-transform: uppercase; color: var(--accent); background: var(--accent-soft);
   border-radius: 20px; padding: 3px 11px; margin-bottom: 12px;
 }
 .card p { margin-bottom: 12px; }
+.card-head { display: flex; align-items: center; gap: 14px; margin: 2px 0 12px; }
+.app-icon { width: 56px; height: 56px; border-radius: 13px; display: block; }
+.app-icon.lg { width: 72px; height: 72px; border-radius: 17px; }
 
 /* Cards carrying a screenshot: text left, phone shot right; stacks on narrow screens. */
 .card.shot { display: grid; grid-template-columns: 1fr 168px; gap: 26px; align-items: center; }
@@ -88,27 +130,74 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
 .links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 16px; }
 .links a { font-size: 15px; }
 
+/* Compact app grid (homepage) */
+.app-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px; margin: 8px 0 10px;
+}
+.app-grid a.mini {
+  display: flex; align-items: center; gap: 14px; text-decoration: none;
+  border: 1px solid var(--line); border-radius: 14px; background: var(--bg);
+  padding: 16px 18px; color: var(--body);
+}
+.app-grid a.mini:hover { border-color: var(--accent); }
+.app-grid .mini .app-icon { width: 48px; height: 48px; border-radius: 11px; flex: none; }
+.app-grid .mini strong { display: block; color: var(--ink); font-size: 16px; }
+.app-grid .mini span { display: block; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+
+/* Google Play badge */
+a.badge { display: inline-block; line-height: 0; }
+a.badge img { height: 60px; width: auto; display: block; }
+
+/* App landing pages */
+.app-hero { display: grid; grid-template-columns: 1fr 220px; gap: 36px; align-items: center; margin-bottom: 8px; }
+.app-hero .head { display: flex; align-items: center; gap: 16px; margin-bottom: 10px; }
+.app-hero h1 { margin: 0; }
+.app-hero .sub { color: var(--muted); font-size: 15px; margin-top: 2px; }
+.features {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 10px 0 14px;
+}
+.features > div {
+  border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft);
+  padding: 16px 18px;
+}
+.features h3 { margin: 0 0 5px; }
+.features p { margin: 0; font-size: 15px; }
+.cta-center { text-align: center; margin: 36px 0 10px; }
+.cta-center .badge { margin: 0 auto; }
+
 /* Buttons */
 .btn {
-  display: inline-block; background: var(--accent); color: #fff; text-decoration: none;
+  display: inline-block; background: var(--btn-bg); color: var(--btn-ink); text-decoration: none;
   padding: 10px 18px; border-radius: 9px; font-size: 15px; font-weight: 600;
 }
-.btn:hover { background: var(--accent-dark); color: #fff; }
+.btn:hover { background: var(--btn-bg-hover); color: var(--btn-ink); }
 
 /* Footer */
 footer.site {
   border-top: 1px solid var(--line); margin-top: 52px; padding: 26px 0 40px;
   color: var(--muted); font-size: 13.5px; line-height: 1.6;
 }
-footer.site a { color: var(--muted); }
+footer.site p { margin: 0 0 4px; }
+footer.site a { color: var(--muted); text-decoration: underline; }
 footer.site a:hover { color: var(--accent); }
-footer.site .legal { margin-top: 6px; }
 
+@media (max-width: 700px) {
+  .strip { grid-template-columns: repeat(2, 1fr); }
+  .features { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .app-hero { grid-template-columns: 1fr; gap: 22px; }
+  .app-hero .phone { max-width: 200px; margin: 0 auto; }
+}
 @media (max-width: 560px) {
   .card.shot { grid-template-columns: 1fr; gap: 20px; }
   .card.shot .shot-img { max-width: 190px; margin: 0 auto; }
   body { font-size: 16px; }
   h1 { font-size: 26px; }
+  .hero h1 { font-size: 30px; }
+  .hero .lede { font-size: 18px; }
+  a.badge img { height: 52px; }
   nav.site a { margin-left: 14px; }
   header.site .wrap { padding-top: 14px; padding-bottom: 14px; }
 }

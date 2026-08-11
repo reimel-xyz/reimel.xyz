@@ -7,21 +7,23 @@ the old Google Sites page. No frameworks, no build step, no external requests �
 ## Contents
 
 ```
-index.html                 Company home (name, no. 14523345, registered office, description)
-apps/index.html            Products — PropDeck + Tasbih+ (+ links to the other policies)
-contact.html               Contact (support@reimel.xyz + registered office)
-privacy/propdeck.html      PropDeck (ported from "Trading Calc"; Play Billing content already present)
-privacy/tasbih-plus.html   Tasbih+ (NEW, corrected — location/notifications/offline, matches its manifest)
-privacy/tasbih.html        Tasbih Counter (VIBRATE only)
-privacy/dictionary.html    Eng-Alb Dictionary  ⚠️ see checklist item 2
-privacy/appkeeper.html     App Keeper (QUERY_ALL_PACKAGES etc. — disclosed)
-privacy/officecalc.html    OfficeCalc (no permissions)
-style.css                  Shared styles
+index.html                 Homepage: hero, "why our apps are different" strip, live-app grid
+apps/index.html            All apps: live cards (icon + screenshot + Play badge) + coming cards + policy links
+apps/tasbih-plus.html      Landing page, Tasbih+ (SEO: tasbih counter, prayer times, offline Quran)
+apps/subs-plus.html        Landing page, Subs+ (SEO: subscription tracker, cancel reminder)
+apps/muslim-budget.html    Landing page, Muslim Budget (SEO: zakat calculator, halal budgeting)
+apps/renewly.html          Landing page, Renewly (SEO: expiry / renewal reminders)
+apps/birthday-plus.html    Landing page, Birthday+ (SEO: birthday reminder app)
+contact.html               Contact + the ONLY page carrying the registered-office address
+privacy/*.html             12 app privacy policies. URL PATHS ARE FROZEN (Play Console links to them)
+img/                       Hero screenshots (420px WebP q82), app icons (192px WebP), google-play-badge.png
+style.css                  Shared styles (single file, dark mode via prefers-color-scheme)
 favicon.svg                Favicon
+sitemap.xml, robots.txt    SEO plumbing
 CNAME                      contains: reimel.xyz
 ```
 
-Footer on every page: `Reimel Ltd · Company No. 14523345 · Registered in England and Wales · Registered office: 159a High Street, Hornchurch, England, RM11 3YD` + `support@reimel.xyz`.
+Footer on every page (one line): `© 2026 Reimel Ltd · Registered in England and Wales · Company No. 14523345 · Legal & contact` (links to contact.html). The registered-office street address appears ONLY on `contact.html`; keep it that way (UK trading-disclosure details stay readily accessible there).
 
 ---
 
