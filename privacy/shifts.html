@@ -70,6 +70,11 @@
       <li><code>android.permission.RECEIVE_BOOT_COMPLETED</code> &ndash; lets the app put that same notification
       back after you restart your phone, if a shift was still running. It does nothing else at start-up, and no
       part of the app runs in the background when no shift is open.</li>
+      <li><code>android.permission.USE_BIOMETRIC</code> and <code>android.permission.USE_FINGERPRINT</code>
+      &ndash; only for the optional App lock in Settings, which asks for your fingerprint or face before Shifts+
+      opens. Android performs that check itself and simply tells the app yes or no: your fingerprint or face is
+      never seen, read or stored by Shifts+, and nothing about it leaves your device. Leave App lock off and
+      these are never used.</li>
     </ul>
     <p>Some further permissions appear in the app&rsquo;s technical manifest because the Android libraries it is
     built with declare them. They are not used to collect anything, and the app runs no background service.</p>
