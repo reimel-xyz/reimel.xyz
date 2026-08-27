@@ -25,7 +25,7 @@
   <div class="wrap">
     <h1>TakeHome+ Privacy Policy</h1>
     <div class="meta">
-      <strong>Effective date:</strong> 17 August 2026<br>
+      <strong>Effective date:</strong> 27 August 2026<br>
       <strong>App:</strong> TakeHome+ (UK take-home pay and tax calculator)<br>
       <strong>Publisher:</strong> Reimel Ltd (company no. 14523345, England and Wales) &middot; <a href="../contact.html">company details</a>
     </div>
@@ -65,7 +65,16 @@
       TakeHome+ opens. Android performs that check itself and simply tells the app yes or no: your fingerprint
       or face is never seen, read or stored by TakeHome+, and nothing about it leaves your device. Leave App
       lock off and these are never used.</li>
+      <li><code>android.permission.FOREGROUND_SERVICE</code>, <code>android.permission.WAKE_LOCK</code> and
+      <code>android.permission.RECEIVE_BOOT_COMPLETED</code> &ndash; TakeHome+ does not ask for these itself.
+      They are added automatically by a scheduling library that Google Play Billing depends on. The app
+      schedules no background work, runs no service, starts nothing when your phone boots and sends you no
+      notifications at all.</li>
     </ul>
+    <p class="small">For completeness, that is <strong>every</strong> permission in the app. TakeHome+&rsquo;s
+    own manifest asks for exactly one, <code>android.permission.INTERNET</code>; the rest arrive with Google
+    Play Billing and the App lock library. You can check this yourself against the installed app: Android
+    lists an app&rsquo;s permissions under Settings &rsaquo; Apps &rsaquo; TakeHome+.</p>
     <p><strong>The calculator itself never uses the network.</strong> No income figure, no pension contribution
     and no result is ever sent anywhere. The only outbound traffic the app can generate is Google Play checking
     whether you own TakeHome+ Pro, completing that purchase if you choose to make it, and showing Google
@@ -73,8 +82,6 @@
     <p>Purchases are handled entirely by Google Play. Reimel Ltd does not receive or store your name, email
     address, or any payment details. Google&rsquo;s own privacy policy covers that transaction:
     <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</p>
-    <p>Some further permissions appear in the app&rsquo;s technical manifest because the Android libraries it is
-    built with declare them. They are not used to collect anything.</p>
 
     <h2>Sharing and exporting</h2>
     <p>When you export a summary (PDF or CSV) or a backup file, the app writes it to the location you choose, or
