@@ -145,6 +145,30 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
 .app-grid .mini strong { display: block; color: var(--ink); font-size: 16px; }
 .app-grid .mini span { display: block; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
 
+/* Screenshot viewer */
+.shot-img { cursor: zoom-in; }
+.shot-img:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.lightbox {
+  position: fixed; inset: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: center;
+  padding: 28px 20px; background: rgba(9, 12, 19, 0.86);
+}
+.lightbox[hidden] { display: none; }
+.lightbox figure { margin: 0; max-height: 100%; display: flex; }
+.lightbox img {
+  max-width: min(420px, 88vw); max-height: calc(100vh - 56px);
+  width: auto; height: auto; display: block;
+  border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.14);
+}
+.lightbox-close {
+  position: absolute; top: 14px; right: 16px;
+  width: 42px; height: 42px; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.24); background: rgba(0, 0, 0, 0.4);
+  color: #fff; font-size: 26px; line-height: 1;
+}
+.lightbox-close:hover { background: rgba(0, 0, 0, 0.7); }
+body.lightbox-open { overflow: hidden; }
+
 /* Apps page: unreleased apps, two up, no screenshot */
 .cards.compact { grid-template-columns: 1fr 1fr; }
 .cards.compact .card { padding: 20px 22px; }
