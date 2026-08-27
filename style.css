@@ -145,6 +145,13 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
 .app-grid .mini strong { display: block; color: var(--ink); font-size: 16px; }
 .app-grid .mini span { display: block; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
 
+/* Apps page: unreleased apps, two up, no screenshot */
+.cards.compact { grid-template-columns: 1fr 1fr; }
+.cards.compact .card { padding: 20px 22px; }
+.cards.compact .card h2 { font-size: 18px; }
+.cards.compact .card p { font-size: 15px; margin-bottom: 10px; }
+.cards.compact .card .links { margin-top: 12px; }
+
 /* Google Play badge */
 a.badge { display: inline-block; line-height: 0; }
 a.badge img { height: 60px; width: auto; display: block; }
@@ -187,6 +194,7 @@ footer.site a:hover { color: var(--accent); }
   .features { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
+  .cards.compact { grid-template-columns: 1fr; }
   .app-hero { grid-template-columns: 1fr; gap: 22px; }
   .app-hero .phone { max-width: 200px; margin: 0 auto; }
 }
