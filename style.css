@@ -204,6 +204,20 @@ a.badge img { height: 60px; width: auto; display: block; }
 }
 .btn:hover { background: var(--btn-bg-hover); color: var(--btn-ink); }
 
+/* Social buttons (footer): button-like, matching the Play badge's weight. Logos are inline SVG
+   so the site keeps making no external requests. */
+.social { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0 6px; }
+footer.site a.social-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 9px; text-decoration: none;
+  font-size: 14.5px; font-weight: 600; line-height: 1; color: #ffffff;
+  border: 1px solid transparent; /* keeps both pills the same height as TikTok's bordered one */
+}
+footer.site a.social-btn svg { width: 17px; height: 17px; fill: currentColor; display: block; }
+footer.site a.social-btn.tiktok { background: #010101; border-color: #3a3a3a; }
+footer.site a.social-btn.facebook { background: #1877f2; }
+footer.site a.social-btn:hover { opacity: 0.88; color: #ffffff; }
+
 /* Footer */
 footer.site {
   border-top: 1px solid var(--line); margin-top: 52px; padding: 26px 0 40px;
