@@ -19,7 +19,10 @@ privacy/*.html             12 app privacy policies. URL PATHS ARE FROZEN (Play C
 img/                       Hero screenshots (420px WebP q82), app icons (192px WebP), google-play-badge.png
 style.css                  Shared styles (single file, dark mode via prefers-color-scheme)
 favicon.svg                Favicon
-sitemap.xml, robots.txt    SEO plumbing
+sitemap1.xml, robots.txt   SEO plumbing. 🚨 The name is sitemap1.xml, not sitemap.xml:
+                           Search Console got permanently stuck on the old URL (never read it
+                           once, 28-08 to 30-08) and only accepted a fresh one. Do not "tidy" the
+                           name back without re-submitting, and keep ONE sitemap, never two.
 CNAME                      contains: reimel.xyz
 ```
 
