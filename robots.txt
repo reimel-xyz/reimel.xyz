@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://reimel.xyz/sitemap.xml
+Sitemap: https://reimel.xyz/sitemap1.xml
