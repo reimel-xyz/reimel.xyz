@@ -42,7 +42,7 @@
 
     <h2>Data we collect: none</h2>
     <p>The app does <strong>not</strong> collect, store on our servers, or share any personal data. There is
-    <strong>no account, no sign-in, and no cloud</strong>, and the app contains <strong>no analytics, no
+    <strong>no account, no sign-in, and no cloud</strong>, and Reimel Ltd runs <strong>no analytics, no
     advertising, and no tracking</strong> of any kind. Your items, photographs, values, notes, property and
     tenancy details, meter readings and settings never leave your device except when you deliberately export
     them (see below).</p>
@@ -50,12 +50,31 @@
     <p>That includes the details of other people. If you record a tenant&rsquo;s name and the dates of their
     tenancy, that information stays on your device exactly like everything else. We never receive it.</p>
 
-    <h2>Network use</h2>
-    <p>The app works fully offline. The only network connection it makes is <strong>Google Play Billing</strong>,
-    used if you choose to buy an optional unlock. Payment is handled entirely by Google Play (see below).</p>
+    <p>There is one exception, and it carries none of your content: the optional receipt reader is built on a
+    Google component that reports technical diagnostics about itself. It is described in full under
+    <a href="#receipt-reader">The receipt reader</a> below.</p>
 
-    <p>The app declares the Internet permission solely because Google Play Billing requires it. No feature of
-    the app sends your data anywhere.</p>
+    <h2>Network use</h2>
+    <p>Everything the app does with your information, it does offline. It opens no connection of its own to send
+    your data anywhere, and the Internet permission is declared because bundled Google libraries require it.</p>
+
+    <p>Two Google components inside the app do use the network. <strong>Google Play Billing</strong>, if you
+    choose to buy an optional unlock, with payment handled entirely by Google Play (see below). And Google&rsquo;s
+    <strong>ML Kit</strong> text reader, which sends Google diagnostics about itself (see below).</p>
+
+    <h2 id="receipt-reader">The receipt reader</h2>
+    <p>The optional receipt reader uses <strong>Google ML Kit</strong>, a text-recognition component that runs
+    <strong>entirely on your device</strong>. Your receipt photograph, and the text read from it, are processed
+    on the phone and are <strong>never sent to Google or to us</strong>.</p>
+
+    <p>ML Kit does send Google technical information about <strong>itself</strong>: an identifier for the
+    installation that is not designed to identify you or your device, the make, model and Android version of the
+    phone, this app&rsquo;s package name and version, how long recognition took, and any error codes. Google uses
+    this to maintain the component. It contains none of your inventory, none of your photographs and none of your
+    tenants&rsquo; details. It is disclosed in the app&rsquo;s Google Play Data safety section as device
+    identifiers and diagnostics.</p>
+
+    <p>The reader is a Pro feature and is used only when you point it at a receipt.</p>
 
     <h2>Photographs</h2>
     <p>Photographs you take or choose are stored in the app&rsquo;s own private storage on your device. They are

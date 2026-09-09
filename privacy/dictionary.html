@@ -35,9 +35,13 @@
 
     <h2>Data we collect: none</h2>
     <p>The app does <strong>not</strong> collect, store, transmit, or share any personal data. The dictionary
-    works <strong>fully offline</strong> from a database bundled inside the app. It contains <strong>no analytics,
-    no advertising, and no tracking</strong>. Your searches and search history are stored <strong>only on your
-    device</strong> and can be cleared at any time.</p>
+    works <strong>offline</strong> from a database bundled inside the app, and Reimel Ltd runs <strong>no
+    analytics, no advertising, and no tracking</strong>. Your searches and search history are stored
+    <strong>only on your device</strong> and can be cleared at any time.</p>
+
+    <p>There is one exception, and it carries none of your content: the optional camera look-up is built on a
+    Google component that reports technical diagnostics about itself. It is described in full under
+    <a href="#camera-lookup">Looking a word up with the camera</a> below.</p>
 
     <h2>Permissions</h2>
     <ul>
@@ -45,10 +49,22 @@
       pointing at printed text. What the camera sees is read <strong>on your device</strong> to detect the word,
       and is <strong>never saved, uploaded or shared</strong>. Decline it and the rest of the app works
       normally.</li>
-      <li><strong>Internet</strong> and <strong>network state</strong>, declared by bundled Android libraries.
-      The app itself makes no network requests: the dictionary is a database inside the app, and
-      &ldquo;Search on Wiktionary&rdquo; hands the word to your browser rather than fetching anything itself.</li>
+      <li><strong>Internet</strong> and <strong>network state</strong>, declared by bundled Google libraries.
+      No feature sends your searches or anything you photograph anywhere: the dictionary is a database inside
+      the app, and &ldquo;Search on Wiktionary&rdquo; hands the word to your browser rather than fetching
+      anything itself. The camera look-up component reports diagnostics about itself, described below.</li>
     </ul>
+
+    <h2 id="camera-lookup">Looking a word up with the camera</h2>
+    <p>The camera look-up uses <strong>Google ML Kit</strong>, a text-recognition component that runs
+    <strong>entirely on your device</strong>. What the camera sees, and the text read from it, are processed on
+    the phone and are <strong>never sent to Google or to us</strong>.</p>
+
+    <p>ML Kit does send Google technical information about <strong>itself</strong>: an identifier for the
+    installation that is not designed to identify you or your device, the make, model and Android version of the
+    phone, this app&rsquo;s package name and version, how long recognition took, and any error codes. Google uses
+    this to maintain the component. It contains nothing you photographed and none of your searches. It is
+    disclosed in the app&rsquo;s Google Play Data safety section as device identifiers and diagnostics.</p>
 
     <h2>Links to other apps</h2>
     <p>If you tap &ldquo;Search on Wiktionary&rdquo; for a word, the app opens that word&rsquo;s page in your device&rsquo;s
