@@ -43,7 +43,7 @@ Footer on every page (one line): `© 2026 Reimel Ltd · Registered in England an
    was meant to be removed in v1.6 and the app has no camera code. The dictionary policy says "no special
    permissions." **Remove those two lines and rebuild/re-upload the APK** so the app's declared permissions
    match the policy (and the Play Data Safety form). Not blocking for the two apps being verified now
-   (PropDeck, Tasbih+), but fix before relying on the dictionary policy.
+   (Trading Calculators, Tasbih+), but fix before relying on the dictionary policy.
 3. **Contact address = `support@reimel.xyz` everywhere** (site, all policies, Play Console). The hand-off
    mentioned `contact@reimel.xyz` once for the contact page, but its own email-routing note says keep
    `support@reimel.xyz` as the single address (it already exists and is on the live policies). I used
@@ -83,12 +83,15 @@ Footer on every page (one line): `© 2026 Reimel Ltd · Registered in England an
 
 1. Set the developer **website** to `https://reimel.xyz` and the **contact email** to `support@reimel.xyz`.
 2. Per-app **privacy policy URLs**:
-   - PropDeck → `https://reimel.xyz/privacy/propdeck.html`
+   - Trading Calculators → `https://reimel.xyz/privacy/trading-calculators.html`
+     (drafted here as "PropDeck" until 10-09-26; `privacy/propdeck.html` is now a stub that
+     redirects, so an old link still resolves)
    - Tasbih+ → `https://reimel.xyz/privacy/tasbih-plus.html`
    - (others under `https://reimel.xyz/privacy/…`)
 3. Re-submit **organization verification**.
 4. Ensure each app's **Data Safety** form matches its policy AND its manifest (Tasbih+: location used but
-   *not collected/shared*; PropDeck: purchases via Google Play).
+   *not collected/shared*; Trading Calculators: purchases via Google Play, and the artifact declares
+   INTERNET + ACCESS_NETWORK_STATE because Play Billing merges them in).
 
 **The old Google Sites page is gone.** `sites.google.com/view/reimel` (and its `/privacy-policy`,
 `/officecalc-privacy`, `/app-keeper-privacy`, `/dictionary-privacy` sub-pages) was deleted on
