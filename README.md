@@ -84,8 +84,8 @@ Footer on every page (one line): `© 2026 Reimel Ltd · Registered in England an
 1. Set the developer **website** to `https://reimel.xyz` and the **contact email** to `support@reimel.xyz`.
 2. Per-app **privacy policy URLs**:
    - Trading Calculators → `https://reimel.xyz/privacy/trading-calculators.html`
-     (drafted here as "PropDeck" until 10-09-26; `privacy/propdeck.html` is now a stub that
-     redirects, so an old link still resolves)
+     (also `terms/trading-calculators.html`. Drafted here as "PropDeck" until 10-09-26; that page
+     was deleted rather than left as a redirect, since the app never published under that name)
    - Tasbih+ → `https://reimel.xyz/privacy/tasbih-plus.html`
    - (others under `https://reimel.xyz/privacy/…`)
 3. Re-submit **organization verification**.
