@@ -25,7 +25,7 @@
   <div class="wrap">
     <h1>Holidays+ Privacy Policy</h1>
     <div class="meta">
-      <strong>Effective date:</strong> 21 September 2026 (updated the same day: hours worked)<br>
+      <strong>Effective date:</strong> 21 September 2026 (updated 22 September 2026)<br>
       <strong>App:</strong> Holidays+ (staff holiday and leave for small businesses)<br>
       <strong>Publisher:</strong> Reimel Ltd (company no. 14523345, England and Wales) &middot; <a href="../contact.html">company details</a>
     </div>
@@ -36,30 +36,31 @@
     <h2>What we collect: nothing</h2>
     <p>We do not collect, receive, store, transmit or share any personal data. There is <strong>no account, no
     sign-in, no analytics, no advertising and no tracking</strong> of any kind. Reimel Ltd never sees who works
-    for you, when they are off, why, or what you pay them.</p>
+    for you, when they are off, why, or what you pay them. If you email us for support, we receive only what
+    you choose to write, and use it only to answer you.</p>
     <p>Everything you enter, your workers&rsquo; names, photos, working days, start and leaving dates, holiday
-    allowances, hours worked that you enter for staff on irregular hours, time off (holiday, sickness, unpaid and
-    other leave), any holiday pay you choose to record, and your settings, is stored <strong>only on your own device</strong>, in the app&rsquo;s private storage.
+    allowances, each person&rsquo;s usual day length, hours worked that you enter for staff on irregular hours, time off (holiday, sickness, unpaid and
+    other leave, bank holidays and closures) with any notes you add, any holiday pay you choose to record, and your settings, is stored <strong>only on your own device</strong>, in the app&rsquo;s private storage.
     Android&rsquo;s automatic cloud backup is switched <strong>off</strong> for this app, so that data is not
-    copied to Google Drive either. If you want a copy, you make it yourself with <strong>Settings &rsaquo;
+    copied to Google Drive either, and it is left out of Android&rsquo;s phone-to-phone transfer too. If you want a copy, you make it yourself with <strong>Settings &rsaquo;
     Backup</strong>, and you choose where the file goes.</p>
     <p>The records are about your staff, so you are responsible for them as their employer: the app simply keeps
     them on your phone. Reimel Ltd does not process them on your behalf, because they never reach us.</p>
 
     <h2>Internet access, and why the app asks for it</h2>
     <p>Holidays+ is free for up to three people, with optional <strong>Team</strong> and <strong>Business</strong>
-    subscriptions for larger teams. To offer those, the app includes Google Play Billing, and that is the only
-    reason it declares these permissions:</p>
+    subscriptions for larger teams. To offer those, the app includes Google&rsquo;s Play Billing library, and
+    that is where these permissions come from:</p>
     <ul>
       <li><code>com.android.vending.BILLING</code> &ndash; lets Google Play process a subscription.</li>
-      <li><code>android.permission.INTERNET</code> &ndash; required by Google Play Billing to reach Play&rsquo;s
-      servers.</li>
-      <li><code>android.permission.ACCESS_NETWORK_STATE</code> &ndash; required by Google Play Billing to check
-      connectivity.</li>
+      <li><code>android.permission.INTERNET</code> and <code>android.permission.ACCESS_NETWORK_STATE</code>
+      &ndash; declared by Google&rsquo;s data-transport library, which Play Billing brings with it. Play Billing
+      uses it to send Google information about purchase requests, such as whether a request succeeded or the
+      connection to Google Play failed, so Google can keep billing working.</li>
     </ul>
     <p><strong>The app itself never uses the network.</strong> No name, photo, booking, allowance or pay record is
-    ever sent anywhere. The only outbound traffic the app can generate is Google Play checking which plan you
-    hold and completing a subscription if you choose to take one.</p>
+    ever sent anywhere. The only outbound traffic the app can generate is Google Play Billing: checking which plan
+    you hold, completing a subscription if you choose to take one, and the purchase logs above.</p>
     <p>Subscriptions are handled entirely by Google Play. Reimel Ltd does not receive or store your name, email
     address, or any payment details. Google&rsquo;s own privacy policy covers that transaction:
     <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</p>
@@ -67,8 +68,8 @@
     <h2>The other permissions the app asks for</h2>
     <ul>
       <li><code>android.permission.USE_BIOMETRIC</code> and <code>android.permission.USE_FINGERPRINT</code>
-      &ndash; only for the optional App lock in Settings, which asks for your fingerprint or face before Holidays+
-      opens. Android performs that check itself and simply tells the app yes or no: your fingerprint or face is
+      &ndash; only for the optional App lock in Settings, which asks for your fingerprint, face or phone PIN before Holidays+
+      opens. Android performs that check itself and simply tells the app yes or no: your fingerprint, face or PIN is
       never seen, read or stored by Holidays+, and nothing about it leaves your device. Leave App lock off and
       these are never used.</li>
       <li><code>android.permission.RECEIVE_BOOT_COMPLETED</code>, <code>android.permission.WAKE_LOCK</code> and
@@ -81,7 +82,7 @@
     you pick; the app has no access to the rest of your photos and asks for no storage permission.</p>
 
     <h2>The home-screen widget</h2>
-    <p>If you add the &ldquo;Who&rsquo;s off&rdquo; widget, it shows first names and dates on your home screen,
+    <p>If you add the &ldquo;Who&rsquo;s off&rdquo; widget, it shows first names (a full name where two people share one), the kind of time off, including sickness, and dates on your home screen,
     where anyone who can see your phone can read them. The widget is optional, and removing it removes that
     view; nothing about it leaves your device.</p>
 
