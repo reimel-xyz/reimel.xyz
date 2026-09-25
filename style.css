@@ -110,7 +110,7 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
   background: var(--bg);
 }
 .card h2 { margin-top: 0; margin-bottom: 0; }
-.card .tag {
+.card .tag, .app-hero .tag {
   display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
   text-transform: uppercase; color: var(--accent); background: var(--accent-soft);
   border-radius: 20px; padding: 3px 11px; margin-bottom: 12px;
