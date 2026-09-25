@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="canonical" href="https://reimel.xyz/privacy/staircalc.html">
 <title>StairCalc &middot; Privacy Policy &middot; Reimel Ltd</title>
-<meta name="description" content="Privacy policy for StairCalc by Reimel Ltd. No data collected, no internet permission; nothing you type ever leaves your device.">
+<meta name="description" content="Privacy policy for StairCalc by Reimel Ltd. No data collected; nothing you type ever leaves your device. Google Play handles the optional one-time Pro purchase.">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="../style.css">
 </head>
@@ -42,9 +42,25 @@
     cloud backup is switched <strong>off</strong> for this app, so that data is not copied to Google Drive
     either.</p>
 
-    <h2>Internet access: none</h2>
-    <p>The app does not request the internet permission and has no way to send anything anywhere. Every
-    calculation, drawing and 3D model is worked out on the phone.</p>
+    <h2>Internet access, and why the app asks for it</h2>
+    <p>StairCalc includes an optional one-time purchase, <strong>StairCalc Pro</strong>, which unlocks the stair
+    types beyond the straight stair, the timber list, PDF and CSV sharing and the full-screen 3D view. To offer
+    that, the app includes Google Play Billing, and that is the only reason it declares these permissions:</p>
+    <ul>
+      <li><code>com.android.vending.BILLING</code> &ndash; lets Google Play process the one-time StairCalc Pro
+      purchase.</li>
+      <li><code>android.permission.INTERNET</code> &ndash; required by Google Play Billing to reach Play&rsquo;s
+      servers.</li>
+      <li><code>android.permission.ACCESS_NETWORK_STATE</code> &ndash; required by Google Play Billing to check
+      connectivity.</li>
+    </ul>
+    <p><strong>The calculator itself never uses the network.</strong> Every calculation, drawing and 3D model is
+    worked out on the phone, and nothing you type is ever sent anywhere. The only outbound traffic the app can
+    generate is Google Play checking whether you own StairCalc Pro, and completing that purchase if you choose to
+    make it.</p>
+    <p>Purchases are handled entirely by Google Play. Reimel Ltd does not receive or store your name, email
+    address, or any payment details. Google&rsquo;s own privacy policy covers that transaction:
+    <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</p>
 
     <h2>Sharing and exporting</h2>
     <p>When you choose to share a cut list (as text, PDF or CSV), the app hands that file to whichever app you
