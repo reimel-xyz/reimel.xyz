@@ -234,7 +234,7 @@ footer.site a:hover { color: var(--accent); }
   .card.shot { grid-template-columns: 1fr; gap: 20px; }
   .card.shot .shot-img { max-width: 190px; margin: 0 auto; }
   body { font-size: 16px; }
-  h1 { font-size: 26px; }
+  h1 { font-size: 27px; }
   .hero h1 { font-size: 30px; }
   .hero .lede { font-size: 18px; }
   a.badge img { height: 52px; }
