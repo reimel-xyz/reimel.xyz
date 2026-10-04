@@ -53,9 +53,11 @@ header.site .wrap {
   padding-top: 18px; padding-bottom: 18px; gap: 16px; flex-wrap: wrap;
 }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+/* The blue R on its navy tile (img/logo-tile.svg); the "R" in the markup stays for screen readers. */
 .brand .logo {
-  width: 30px; height: 30px; border-radius: 7px; background: var(--btn-bg);
-  color: var(--btn-ink); font-weight: 700; display: grid; place-items: center; font-size: 17px;
+  width: 34px; height: 34px; border-radius: 8px;
+  background: #06122B url("img/logo-tile.svg") center / cover no-repeat;
+  color: transparent; font-size: 0; overflow: hidden; flex: none;
 }
 .brand .name { font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
 nav.site a { color: var(--body); text-decoration: none; margin-left: 20px; font-size: 15px; }
@@ -90,6 +92,21 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
 .hero h1 { font-size: 40px; line-height: 1.15; max-width: 640px; }
 .hero .lede { font-size: 20px; max-width: 560px; margin-bottom: 22px; }
 .hero .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
+
+/* Home banner: the logo's navy and blues, the same look as the social banners. Fixed colours in
+   both themes, since it is a brand panel rather than page chrome. */
+.hero.banner {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 28px;
+  padding: 44px 44px 40px; border-radius: 20px; color: #c9d6ee;
+  background: radial-gradient(120% 140% at 100% 0%, #123a8c 0%, #0B1A3A 45%, #06122B 100%);
+}
+.hero.banner h1 { color: #ffffff; }
+.hero.banner .lede { color: #c9d6ee; }
+.hero.banner .btn { background: #0D66FF; color: #ffffff; }
+.hero.banner .btn:hover { background: #2a7dff; color: #ffffff; }
+.hero.banner .cta a:not(.btn) { color: #7fd3ff; }
+.hero.banner .cta a:not(.btn):hover { color: #b9e9ff; }
+.banner-mark { width: 168px; height: 168px; display: block; }
 
 /* "Why our apps are different" strip */
 .strip {
@@ -229,6 +246,8 @@ footer.site a:hover { color: var(--accent); }
   .cards.compact { grid-template-columns: 1fr; }
   .app-hero { grid-template-columns: 1fr; gap: 22px; }
   .app-hero .phone { max-width: 200px; margin: 0 auto; }
+  .hero.banner { grid-template-columns: 1fr; gap: 0; padding: 30px 22px 26px; border-radius: 16px; }
+  .banner-mark { width: 64px; height: 64px; grid-row: 1; margin-bottom: 16px; }
 }
 @media (max-width: 560px) {
   .card.shot { grid-template-columns: 1fr; gap: 20px; }

@@ -1,5 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Reimel Apps mark on its navy tile (from APKs/Reimel-Social/logo/reimel-r.svg, 04-10-26) -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 30 760 760" width="760" height="760">
+  <!-- Reimel Apps "R" mark, master vector (04-10-26). Redrawn from Albo's chosen Concept 2 ("Modern
+       Tech") so it is sharp at every size; the concept sheet itself was a 1536x1024 AI image.
+       Three shapes: the top bar + bowl, the stem, the diagonal leg. Transparent background. -->
   <defs>
     <linearGradient id="bowl" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#14B6FF"/>
@@ -15,13 +17,13 @@
       <stop offset="1" stop-color="#16B2FF"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="#06122B"/>
-  <g transform="translate(10 10) scale(0.0579) translate(-40 -30)">
+  <!-- top bar + bowl: slanted cut at top left, counter inside, lower edge parallel to the leg -->
   <path fill="url(#bowl)" d="M 82 60 L 520 60 C 640 60 736 156 736 270 C 736 372 668 456 584 478
            L 500 388 C 538 378 556 340 556 300 C 556 252 520 218 474 218 L 206 218 Q 190 218 180 206 L 74 74 Q 66 60 82 60 Z"/>
-<path fill="url(#stem)" d="M 88 248 L 200 248 Q 216 248 226 262 L 268 322 Q 278 336 278 352
+  <!-- stem: chamfered top right, big rounded bottom left -->
+  <path fill="url(#stem)" d="M 88 248 L 200 248 Q 216 248 226 262 L 268 322 Q 278 336 278 352
            L 278 742 Q 278 756 264 756 L 186 756 Q 72 756 72 642 L 72 264 Q 72 248 88 248 Z"/>
-<path fill="url(#leg)" d="M 326 378 L 470 378 Q 494 378 508 398 L 760 738 Q 772 756 750 756
+  <!-- diagonal leg -->
+  <path fill="url(#leg)" d="M 326 378 L 470 378 Q 494 378 508 398 L 760 738 Q 772 756 750 756
            L 606 756 Q 584 756 570 738 L 316 396 Q 306 378 326 378 Z"/>
-  </g>
 </svg>
