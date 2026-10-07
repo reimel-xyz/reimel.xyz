@@ -25,7 +25,7 @@
   <div class="wrap">
     <h1>Rota+ Privacy Policy</h1>
     <div class="meta">
-      <strong>Effective date:</strong> 22 September 2026<br>
+      <strong>Effective date:</strong> 7 October 2026<br>
       <strong>App:</strong> Rota+ (staff rotas for small businesses)<br>
       <strong>Publisher:</strong> Reimel Ltd (company no. 14523345, England and Wales) &middot; <a href="../contact.html">company details</a>
     </div>
@@ -38,7 +38,7 @@
     sign-in, no analytics, no advertising and no tracking</strong> of any kind. Reimel Ltd never sees who works
     for you, when they work, whether they came in, or what you pay them. If you email us for support, we receive
     only what you choose to write, and use it only to answer you.</p>
-    <p>Everything you enter, your workers&rsquo; names, photos, colours, usual working days, pay rates, the days
+    <p>Everything you enter, your workers&rsquo; names, photos, colours, usual working days, pay rates, contracted hours, the days
     they can&rsquo;t work with any reason you add, shifts, shift types and templates, the ticks saying who
     came in and for how long, the pay periods you mark as paid, and your settings, is stored <strong>only on your
     own device</strong>, in the app&rsquo;s private storage. Android&rsquo;s automatic cloud backup is switched
@@ -75,9 +75,15 @@
       these are never used.</li>
       <li><code>android.permission.RECEIVE_BOOT_COMPLETED</code>, <code>android.permission.WAKE_LOCK</code> and
       <code>android.permission.FOREGROUND_SERVICE</code> &ndash; declared by Android&rsquo;s own scheduling
-      library, which the app uses for one small task: refreshing the home-screen widget just after midnight so
-      &ldquo;who&rsquo;s on today&rdquo; is right when the day changes. That task reads your records on the
-      device and sends nothing anywhere.</li>
+      library, which the app uses for small tasks on the device: refreshing the home-screen widget just after
+      midnight so &ldquo;who&rsquo;s on today&rdquo; is right when the day changes, writing the automatic backup
+      if you turned it on, and checking whether a reminder is due. These read your records on the device and send
+      nothing anywhere.</li>
+      <li><code>android.permission.POST_NOTIFICATIONS</code> &ndash; only for the two optional reminders in
+      Settings: one to tick today&rsquo;s shifts and one to plan next week, at times you choose. Both are off
+      until you switch one on, and Android asks you then, never at first launch. A reminder is made on your phone
+      from your own records and shows only there; it is not a push message from us, and nothing is sent anywhere.
+      Leave the reminders off and this is never used.</li>
     </ul>
     <p>Worker photos are chosen with Android&rsquo;s own photo picker, which gives the app only the one picture
     you pick; the app has no access to the rest of your photos and asks for no storage permission.</p>
