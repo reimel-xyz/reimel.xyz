@@ -67,6 +67,12 @@ const T = {
   notASign: "That's not a Crew+ sign. Try the QR code on the sign at work.",
   cameraFailed: "The camera couldn't open. You can still clock in without scanning.",
   noCameraApi: "This browser can't use the camera here. You can still clock in without scanning.",
+  cameraBlocked: "The browser is blocking the camera for this page. Allow it (tap the icon by the address, then Permissions, Camera), or take a photo of the sign instead. If the browser never asks, the phone has the camera switched off for it: Settings, Apps, the browser, Permissions, Camera.",
+  cameraBusy: "The camera is in use by another app. Close that app and try again, or take a photo of the sign instead.",
+  noCamera: "No camera was found. You can still clock in without scanning.",
+  takePhoto: "Take a photo of the sign",
+  photoReading: "Reading the photo",
+  photoNotSign: "No Crew+ code in that photo. Get closer, fill the picture with the code, and try again.",
   scanOn: "Camera on. Hold the sign inside the view.",
   scanCloser: "Move closer so the code fills the view, and hold still.",
   scanStuck: "Still nothing? Tap \"I can't scan it\": you're clocked in, and your manager sees it had no scan.",
@@ -152,7 +158,7 @@ class DemoApi {
     if (p.p_kind === "BREAK_END" && st !== "ON_BREAK") throw { code: "P0001", message: "You're not on a break." };
     if (p.p_kind === "OUT" && st === "NOT_WORKING") throw { code: "P0001", message: "You're not clocked in." };
     const code = (p.p_code ?? "").toUpperCase();
-    const proved = p.p_kind === "IN" && code === "DEMOCODE22" ? (p.p_method ?? "QR") : "NONE";
+    const proved = p.p_kind === "IN" && code === "WAVESDEMQ2" ? (p.p_method ?? "QR") : "NONE";
     const ev = { id: p.p_client_id, kind: p.p_kind, atMillis: p.p_offline ? Date.parse(p.p_device_time) : Date.now(), siteCheck: proved, location: p.p_location ?? "UNAVAILABLE", recordedOffline: !!p.p_offline };
     this.rows.push(ev);
     return ev;
@@ -210,7 +216,8 @@ let note = null;         // a short line on Home after a tap
 let view = null;         // { me, company, sites, events, email }
 let queue = [];
 let sheet = false;
-let scanning = null;     // { stream, raf }
+let photoOffer = false;  // the live camera was refused on this device: the sheet also offers a photo of the sign
+let scanning = null;     // { stream, wrap, timer, started }
 let flushing = false;
 let resetEmail = "";
 let pollTimer = null;
@@ -393,8 +400,20 @@ async function openScanner() {
     // A wide, sharp frame: the sign's 21-module code needs about 5 px a module once a lens is soft (jsQR measured
     // 09-10-26, web/test/qr_decode_limits.mjs), so about 150 px wide, and the browser's default frame is only 640 wide.
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
-  } catch {
-    if (scanning === mine) { closeScanner(); sheet = true; note = T.cameraFailed; render(); }
+  } catch (e) {
+    // Say why, and from now on offer the phone's own camera app (a photo) as the way past a browser that blocks the
+    // live camera: Samsung Internet on Albo's phone did (09-10-26) while a plain Chromium browser on it did not.
+    const name = e?.name ?? "";
+    if (scanning === mine) {
+      closeScanner();
+      sheet = true;
+      photoOffer = true;
+      note = name === "NotAllowedError" || name === "SecurityError" ? T.cameraBlocked
+        : name === "NotReadableError" || name === "AbortError" ? T.cameraBusy
+        : name === "NotFoundError" ? T.noCamera
+        : T.cameraFailed;
+      render();
+    }
     return;
   }
   if (scanning !== mine) { stream.getTracks().forEach((t) => t.stop()); return; }
@@ -454,6 +473,46 @@ function closeScanner() {
   if (scanning.stream) scanning.stream.getTracks().forEach((t) => t.stop());
   scanning.wrap.remove();
   scanning = null;
+}
+
+/** A photo of the sign from the phone's own camera app (the file input with capture): decoded here, never kept or sent. */
+async function readPhoto(file) {
+  if (!file) return;
+  sheet = false;
+  busy = true;
+  note = T.photoReading;
+  render();
+  let text = null;
+  try {
+    let bitmap;
+    try { bitmap = await createImageBitmap(file, { imageOrientation: "from-image" }); }
+    catch { bitmap = await createImageBitmap(file); }
+    // Enough pixels for the code, not the whole 12-megapixel photo: the decoder reads a 150 px code comfortably.
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close?.();
+    if ("BarcodeDetector" in window) {
+      try {
+        const d = new window.BarcodeDetector({ formats: ["qr_code"] });
+        const codes = await d.detect(canvas);
+        text = codes.find((c) => c.rawValue)?.rawValue ?? null;
+      } catch { text = null; }
+    }
+    if (!text && window.jsQR) {
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      text = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "attemptBoth" })?.data ?? null;
+    }
+  } catch { text = null; }
+  busy = false;
+  note = null;
+  const code = text ? R.parseSiteCode(text) : null;
+  if (code) { await clockInWith(code, "QR"); return; }
+  sheet = true;
+  note = text ? T.notASign : T.photoNotSign;
+  render();
 }
 
 // ---------------------------------------------------------------- actions
@@ -609,7 +668,8 @@ function homeHtml() {
 function sheetHtml() {
   return `<div class="sheet-back" data-act="sheet-close"><div class="sheet"><h2>${esc(T.sheetTitle)}</h2><p>${esc(T.sheetLine)}</p>
     <div class="row"><button class="btn primary" data-act="scan">${esc(T.scan)}</button></div>
-    <div class="row"><button class="btn tonal" data-act="cant-scan">${esc(T.cantScan)}</button></div>
+    ${photoOffer ? `<div class="row"><label class="btn tonal">${esc(T.takePhoto)}<input type="file" accept="image/*" capture="environment" data-photo hidden></label></div>` : ""}
+    <div class="row"><button class="btn ${photoOffer ? "text" : "tonal"}" data-act="cant-scan">${esc(T.cantScan)}</button></div>
     <p class="small muted">${esc(T.cantScanNote)}</p></div></div>`;
 }
 
@@ -618,6 +678,9 @@ document.addEventListener("click", (e) => {
   if (!a) return;
   if (a.classList.contains("sheet-back") && e.target !== a) return;
   act(a.dataset.act, a);
+});
+document.addEventListener("change", (e) => {
+  if (e.target.matches?.("[data-photo]")) readPhoto(e.target.files?.[0]);
 });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
