@@ -66,6 +66,10 @@ const T = {
   cantScanNote: "Can't scan? You're still clocked in, and your manager sees it had no scan.",
   notASign: "That's not a Crew+ sign. Try the QR code on the sign at work.",
   cameraFailed: "The camera couldn't open. You can still clock in without scanning.",
+  noCameraApi: "This browser can't use the camera here. You can still clock in without scanning.",
+  scanOn: "Camera on. Hold the sign inside the view.",
+  scanCloser: "Move closer so the code fills the view, and hold still.",
+  scanStuck: "Still nothing? Tap \"I can't scan it\": you're clocked in, and your manager sees it had no scan.",
   cancel: "Cancel",
   gettingLocation: "Getting your location",
   clockedIn: "Clocked in.",
@@ -379,43 +383,75 @@ async function openScanner() {
   bar.innerHTML = `<p class="small muted" id="scanmsg">${esc(T.sheetLine)}</p><div class="row"><button class="btn outline" data-act="scan-cancel">${esc(T.cancel)}</button><button class="btn tonal" data-act="cant-scan">${esc(T.cantScan)}</button></div>`;
   wrap.appendChild(bar);
   document.body.appendChild(wrap);
+  const say = (text) => { const m = document.getElementById("scanmsg"); if (m) m.textContent = text; };
+  // Registered BEFORE the permission prompt, so Cancel during the prompt closes the view and the late stream is dropped.
+  const mine = { stream: null, wrap, timer: 0, started: Date.now() };
+  scanning = mine;
+  if (!navigator.mediaDevices?.getUserMedia) { closeScanner(); sheet = true; note = T.noCameraApi; render(); return; }
   let stream;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
+    // A wide, sharp frame: the sign's 21-module code needs about 5 px a module once a lens is soft (jsQR measured
+    // 09-10-26, web/test/qr_decode_limits.mjs), so about 150 px wide, and the browser's default frame is only 640 wide.
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
   } catch {
-    wrap.remove();
-    sheet = true;
-    note = T.cameraFailed;
-    render();
+    if (scanning === mine) { closeScanner(); sheet = true; note = T.cameraFailed; render(); }
     return;
   }
+  if (scanning !== mine) { stream.getTracks().forEach((t) => t.stop()); return; }
+  mine.stream = stream;
   video.srcObject = stream;
   await video.play().catch(() => { /* iOS needs the gesture; the user's tap was one */ });
+  say(T.scanOn);
+  // The reader: the browser's own first (Chrome on Android reads soft and tilted codes through the system's barcode
+  // module), jsQR on a copied frame otherwise (Safari has no reader of its own).
+  let detector = null;
+  try {
+    if ("BarcodeDetector" in window && (await window.BarcodeDetector.getSupportedFormats()).includes("qr_code")) {
+      detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+    }
+  } catch { detector = null; }
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
-  scanning = { stream, wrap, raf: 0 };
-  const loop = () => {
-    if (!scanning) return;
-    if (video.readyState >= 2 && window.jsQR) {
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-      ctx.drawImage(video, 0, 0);
-      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const hit = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
-      if (hit && hit.data) {
-        const code = R.parseSiteCode(hit.data);
-        if (code) { closeScanner(); clockInWith(code, "QR"); return; }
-        const m = document.getElementById("scanmsg"); if (m) m.textContent = T.notASign;
+  const found = (text) => {
+    const code = R.parseSiteCode(text);
+    if (code) { closeScanner(); clockInWith(code, "QR"); return true; }
+    say(T.notASign);
+    return false;
+  };
+  const readFrame = async () => {
+    if (video.readyState < 2 || !video.videoWidth) return false;
+    if (detector) {
+      try {
+        const codes = await detector.detect(video);
+        return codes.some((c) => c.rawValue && found(c.rawValue));
+      } catch {
+        detector = null; // the browser's reader is not usable on this device (no module installed): jsQR from here
+        return false;
       }
     }
-    scanning.raf = requestAnimationFrame(loop);
+    if (!window.jsQR) return false;
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0);
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const hit = window.jsQR(img.data, img.width, img.height, { inversionAttempts: "dontInvert" });
+    return !!(hit && hit.data && found(hit.data));
   };
-  scanning.raf = requestAnimationFrame(loop);
+  const loop = async () => {
+    if (scanning !== mine) return;
+    // 🚨 One bad frame (the first often has no size yet) must never end the scan: the old loop threw and went quiet.
+    try { if (await readFrame()) return; } catch { /* next frame */ }
+    if (scanning !== mine) return;
+    const age = Date.now() - mine.started;
+    if (age > 15000) say(T.scanStuck); else if (age > 6000) say(T.scanCloser);
+    mine.timer = setTimeout(loop, 120);
+  };
+  loop();
 }
 
 function closeScanner() {
   if (!scanning) return;
-  cancelAnimationFrame(scanning.raf);
-  scanning.stream.getTracks().forEach((t) => t.stop());
+  clearTimeout(scanning.timer);
+  if (scanning.stream) scanning.stream.getTracks().forEach((t) => t.stop());
   scanning.wrap.remove();
   scanning = null;
 }
