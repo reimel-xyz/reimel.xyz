@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crew+ clock in</title>
+<meta name="description" content="Clock in and out at work from your phone.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f3a36">
+<meta name="color-scheme" content="dark">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Crew+">
+<style>
+  /* The app's own dark look (DESIGN 1.1): a near-black page, cards a step lighter with a visible edge, the teal primary,
+     the green hero. One screen wide, thumb-sized buttons, safe-area aware for the notch and the home bar. */
+  :root {
+    --bg: #0c1214; --card: #171b1e; --card-edge: #262c30; --ink: #ecf0ef; --muted: #9aa5a3;
+    --teal: #1db9b0; --teal-ink: #062a27; --hero-a: #14403c; --hero-b: #0d2927; --hero-ink: #e8f4f2;
+    --good: #35c48a; --warn: #f0a830; --warn-fill: #3a2a12; --bad: #e46a7a; --info: #1db9b0;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.4 -apple-system, "Segoe UI", Roboto, system-ui, sans-serif; -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  main { max-width: 480px; margin: 0 auto; padding: 12px 16px 28px; }
+  h1 { font-size: 28px; line-height: 1.15; margin: 0 0 6px; }
+  p { margin: 0 0 10px; }
+  .muted { color: var(--muted); }
+  .small { font-size: 14px; }
+  .kicker { font-size: 12px; letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; }
+  .hero { border-radius: 22px; padding: 14px 16px 16px; background: linear-gradient(160deg, var(--hero-a), var(--hero-b)); color: var(--hero-ink); margin-bottom: 10px; }
+  .hero .kicker { opacity: .85; display: flex; align-items: center; gap: 10px; }
+  .hero .face { margin-left: auto; width: 34px; height: 34px; border-radius: 50%; background: #e8542f; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 16px; }
+  .hero .big { font-size: 34px; font-weight: 800; margin-top: 6px; }
+  .hero .line { opacity: .85; margin-top: 2px; }
+  .card { background: var(--card); border: 1px solid var(--card-edge); border-radius: 20px; padding: 14px 16px; margin-bottom: 10px; }
+  .state { display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; color: var(--muted); }
+  .state .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .state.good { color: var(--good); } .state.warn { color: var(--warn); }
+  .figure { font-size: 36px; font-weight: 800; margin: 6px 0 0; }
+  .stats { display: flex; gap: 14px; margin-top: 10px; }
+  .stat { flex: 1; } .stat .l { color: var(--muted); font-size: 13px; } .stat .v { font-weight: 600; font-size: 17px; }
+  .row { display: flex; gap: 10px; margin-top: 12px; }
+  .btn { flex: 1; appearance: none; border: 0; border-radius: 999px; padding: 15px 18px; font: inherit; font-weight: 700; font-size: 17px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn.primary { background: var(--teal); color: var(--teal-ink); }
+  .btn.tonal { background: #22383a; color: var(--ink); }
+  .btn.outline { background: transparent; color: var(--teal); border: 1.5px solid var(--teal); }
+  .btn.text { background: transparent; color: var(--teal); padding: 12px; }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .btn:active { transform: scale(.985); }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 4px; }
+  input { width: 100%; font: inherit; font-size: 17px; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--card-edge); background: #10161a; color: var(--ink); }
+  input:focus { outline: 2px solid var(--teal); outline-offset: 0; }
+  .notice { border-radius: 14px; padding: 10px 12px; margin-top: 10px; font-size: 14px; border: 1px solid; }
+  .notice.warn { background: var(--warn-fill); border-color: #6b4d18; color: #ffd59a; }
+  .notice.bad { background: #3a1a22; border-color: #7a3040; color: #ffb3bf; }
+  .notice.info { background: #10302e; border-color: #1f5a56; color: #bfeee9; }
+  .notice .dismiss { float: right; background: none; border: 0; color: inherit; font: inherit; font-weight: 700; cursor: pointer; }
+  .sheet-back { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: flex-end; justify-content: center; z-index: 10; }
+  .sheet { width: 100%; max-width: 480px; background: var(--card); border-radius: 24px 24px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+  .sheet h2 { margin: 0 0 8px; font-size: 20px; }
+  .scan { position: fixed; inset: 0; background: #000; z-index: 20; display: flex; flex-direction: column; }
+  .scan video { flex: 1; width: 100%; object-fit: cover; }
+  .scan .bar { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: #0b0f11; }
+  .foot { margin-top: 18px; text-align: center; color: var(--muted); font-size: 13px; }
+  .foot button { background: none; border: 0; color: var(--teal); font: inherit; font-weight: 600; cursor: pointer; }
+  .demo { background: #3a2a12; color: #ffd59a; border-radius: 12px; padding: 8px 12px; font-size: 13px; margin-bottom: 10px; }
+  .install { margin-top: 12px; }
+</style>
+</head>
+<body>
+<main id="app" aria-live="polite"></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
