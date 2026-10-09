@@ -41,7 +41,17 @@ body {
   font-size: 17px;
 }
 .wrap { max-width: var(--max); margin: 0 auto; padding: 0 20px; }
-.prose { max-width: 760px; }
+/* Reading column for policies, terms and contact: about 78 characters a line at 17px. */
+.prose { max-width: 680px; }
+
+/* Hover and focus changes ease rather than snap (brief, purposeful; off for reduced motion). */
+a, .btn, .app-grid a.mini, footer.site a.social-badge, .lightbox-close {
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease,
+              opacity 0.15s ease, box-shadow 0.15s ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  a, .btn, .app-grid a.mini, footer.site a.social-badge, .lightbox-close { transition: none; }
+}
 
 /* Header */
 header.site {
@@ -60,7 +70,11 @@ header.site .wrap {
   color: transparent; font-size: 0; overflow: hidden; flex: none;
 }
 .brand .name { font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
-nav.site a { color: var(--body); text-decoration: none; margin-left: 20px; font-size: 15px; }
+/* Text links carry a 44px tap height; the negative margins keep the layout where it was. */
+nav.site a {
+  color: var(--body); text-decoration: none; font-size: 15px;
+  display: inline-block; padding: 12px 0; margin: -12px 0 -12px 20px;
+}
 nav.site a:hover { color: var(--accent); }
 nav.site a.active { color: var(--accent); font-weight: 600; }
 
@@ -94,6 +108,7 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
 .hero h1 { font-size: 40px; line-height: 1.15; max-width: 640px; }
 .hero .lede { font-size: 20px; max-width: 560px; margin-bottom: 22px; }
 .hero .cta { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
+.hero .cta a:not(.btn) { display: inline-block; padding: 9px 0; margin: -9px 0; }
 
 /* Home banner: the logo's navy and blues, the same look as the social banners. Fixed colours in
    both themes, since it is a brand panel rather than page chrome. */
@@ -119,8 +134,8 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
   border: 1px solid var(--line); border-radius: 12px; background: var(--bg-soft);
   padding: 16px 14px; text-align: center;
 }
-.strip strong { display: block; color: var(--ink); font-size: 15.5px; }
-.strip span { display: block; color: var(--muted); font-size: 13.5px; margin-top: 3px; line-height: 1.45; }
+.strip strong { display: block; color: var(--ink); font-size: 15px; }
+.strip span { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; line-height: 1.45; }
 
 /* Cards (apps page) */
 .cards { display: grid; gap: 18px; margin: 8px 0 10px; }
@@ -148,6 +163,7 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
 }
 .links { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin-top: 16px; }
 .links a { font-size: 15px; }
+.links a:not(.badge) { display: inline-block; padding: 10px 0; margin: -10px 0; }
 
 /* Compact app grid (homepage) */
 .app-grid {
@@ -159,10 +175,10 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
   border: 1px solid var(--line); border-radius: 14px; background: var(--bg);
   padding: 16px 18px; color: var(--body);
 }
-.app-grid a.mini:hover { border-color: var(--accent); }
+.app-grid a.mini:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06); }
 .app-grid .mini .app-icon { width: 48px; height: 48px; border-radius: 11px; flex: none; }
 .app-grid .mini strong { display: block; color: var(--ink); font-size: 16px; }
-.app-grid .mini span { display: block; font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+.app-grid .mini span { display: block; font-size: 13px; color: var(--muted); line-height: 1.45; }
 
 /* Screenshot viewer */
 .shot-img { cursor: zoom-in; }
@@ -234,10 +250,11 @@ footer.site a.social-badge:focus-visible { outline: 2px solid var(--accent); out
 /* Footer */
 footer.site {
   border-top: 1px solid var(--line); margin-top: 52px; padding: 26px 0 40px;
-  color: var(--muted); font-size: 13.5px; line-height: 1.6;
+  color: var(--muted); font-size: 13px; line-height: 1.6;
 }
 footer.site p { margin: 0 0 4px; }
 footer.site a { color: var(--muted); text-decoration: underline; }
+footer.site p a { display: inline-block; padding: 11px 0; margin: -11px 0; }
 footer.site a:hover { color: var(--accent); }
 
 @media (max-width: 700px) {
@@ -259,6 +276,8 @@ footer.site a:hover { color: var(--accent); }
   .hero h1 { font-size: 30px; }
   .hero .lede { font-size: 18px; }
   a.badge img { height: 52px; }
-  nav.site a { margin-left: 14px; }
+  /* Brand and nav share one row on a phone. */
+  .brand .name { font-size: 17px; }
+  nav.site a { font-size: 14px; margin-left: 12px; }
   header.site .wrap { padding-top: 14px; padding-bottom: 14px; }
 }
