@@ -73,6 +73,8 @@ const T = {
   takePhoto: "Take a photo of the sign",
   photoReading: "Reading the photo",
   photoNotSign: "No Crew+ code in that photo. Get closer, fill the picture with the code, and try again.",
+  codeReady: "The code from the sign is ready.",
+  clockInHere: "Clock in at this sign",
   scanOn: "Camera on. Hold the sign inside the view.",
   scanCloser: "Move closer so the code fills the view, and hold still.",
   scanStuck: "Still nothing? Tap \"I can't scan it\": you're clocked in, and your manager sees it had no scan.",
@@ -158,7 +160,8 @@ class DemoApi {
     if (p.p_kind === "BREAK_END" && st !== "ON_BREAK") throw { code: "P0001", message: "You're not on a break." };
     if (p.p_kind === "OUT" && st === "NOT_WORKING") throw { code: "P0001", message: "You're not clocked in." };
     const code = (p.p_code ?? "").toUpperCase();
-    const proved = p.p_kind === "IN" && code === "WAVESDEMQ2" ? (p.p_method ?? "QR") : "NONE";
+    // The Android app's own demo site code (data/local/DemoSeed), so the app's printed demo sign works in this demo too.
+    const proved = p.p_kind === "IN" && code === "DEMP234567" ? (p.p_method ?? "QR") : "NONE";
     const ev = { id: p.p_client_id, kind: p.p_kind, atMillis: p.p_offline ? Date.parse(p.p_device_time) : Date.now(), siteCheck: proved, location: p.p_location ?? "UNAVAILABLE", recordedOffline: !!p.p_offline };
     this.rows.push(ev);
     return ev;
@@ -222,6 +225,23 @@ let flushing = false;
 let resetEmail = "";
 let pollTimer = null;
 let lastHtml = "";       // render() swaps the DOM only when the picture changed: a swap under a thumb loses the tap
+
+// A code handed in the address: an old sign's link (https://reimel.xyz/clock/<code>) opened by the phone's own camera
+// app or any QR reader, sent here by the site's 404 page as ?code=. Offered as "Clock in at this sign" once signed in,
+// kept through the sign-in in sessionStorage, and forgotten the moment it is used, declined or no longer applies.
+let pendingCode = (() => {
+  const q = new URLSearchParams(location.search);
+  let code = R.parseSiteCode(q.get("code") ?? "");
+  if (code) {
+    q.delete("code");
+    history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : "") + location.hash);
+    try { sessionStorage.setItem("crew.code", code); } catch { /* fine without */ }
+  } else {
+    try { code = R.parseSiteCode(sessionStorage.getItem("crew.code") ?? ""); } catch { code = null; }
+  }
+  return code;
+})();
+function dropCode() { pendingCode = null; try { sessionStorage.removeItem("crew.code"); } catch { /* nothing to clear */ } }
 
 const app = document.getElementById("app");
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => { const r = (Math.random() * 16) | 0; return (c === "x" ? r : (r & 0x3) | 0x8).toString(16); }));
@@ -368,6 +388,7 @@ function position() {
 }
 
 async function clockInWith(code, method) {
+  dropCode();
   sheet = false;
   busy = true;
   note = T.gettingLocation;
@@ -547,7 +568,8 @@ async function act(name, el) {
       return;
     }
     case "clock-in": sheet = true; note = null; render(); return;
-    case "sheet-close": sheet = false; render(); return;
+    case "sheet-close": sheet = false; dropCode(); render(); return;
+    case "clock-in-code": { const c = pendingCode; dropCode(); if (c) await clockInWith(c, "QR"); return; }
     case "scan": sheet = false; render(); await openScanner(); return;
     case "scan-cancel": closeScanner(); return;
     case "cant-scan": closeScanner(); await clockInWith(null, "NONE"); return;
@@ -575,6 +597,10 @@ function plain(e) {
 // ---------------------------------------------------------------- drawing
 
 function render() {
+  // A code from the address opens the sheet by itself, once signed in and not clocked in; otherwise it no longer applies.
+  if (pendingCode && screen === "home" && !busy && !sheet) {
+    if (R.state(effectiveEvents(), Date.now()) === "NOT_WORKING") sheet = true; else dropCode();
+  }
   let html = "";
   if (DEMO) html += `<div class="demo">${esc(T.demo)}</div>`;
   if (screen === "loading") html += `<div class="card"><p class="muted">${esc(T.reading)}</p></div>`;
@@ -666,10 +692,12 @@ function homeHtml() {
 }
 
 function sheetHtml() {
-  return `<div class="sheet-back" data-act="sheet-close"><div class="sheet"><h2>${esc(T.sheetTitle)}</h2><p>${esc(T.sheetLine)}</p>
-    <div class="row"><button class="btn primary" data-act="scan">${esc(T.scan)}</button></div>
+  const code = pendingCode;
+  return `<div class="sheet-back" data-act="sheet-close"><div class="sheet"><h2>${esc(T.sheetTitle)}</h2><p>${esc(code ? T.codeReady : T.sheetLine)}</p>
+    ${code ? `<div class="row"><button class="btn primary" data-act="clock-in-code">${esc(T.clockInHere)}</button></div>` : ""}
+    <div class="row"><button class="btn ${code ? "tonal" : "primary"}" data-act="scan">${esc(T.scan)}</button></div>
     ${photoOffer ? `<div class="row"><label class="btn tonal">${esc(T.takePhoto)}<input type="file" accept="image/*" capture="environment" data-photo hidden></label></div>` : ""}
-    <div class="row"><button class="btn ${photoOffer ? "text" : "tonal"}" data-act="cant-scan">${esc(T.cantScan)}</button></div>
+    <div class="row"><button class="btn ${photoOffer || code ? "text" : "tonal"}" data-act="cant-scan">${esc(T.cantScan)}</button></div>
     <p class="small muted">${esc(T.cantScanNote)}</p></div></div>`;
 }
 

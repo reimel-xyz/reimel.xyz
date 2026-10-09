@@ -12,6 +12,14 @@
 <!-- Absolute paths throughout: GitHub Pages serves this page at whatever address was asked for,
      however deep, so a relative "style.css" would break under /apps/ or /privacy/. -->
 <link rel="stylesheet" href="/style.css?v=6">
+<script>
+  // A Crew+ clock-in sign printed before 06-10-26 holds the link https://reimel.xyz/clock/<code>, and a phone's own
+  // camera app opens it. Nothing lives at /clock/, so send it to the web clock-in with the code (09-10-26).
+  (function () {
+    var m = /^\/clock\/([A-Za-z0-9]{10})\/?$/.exec(location.pathname);
+    if (m) location.replace("/crew/?code=" + m[1].toUpperCase());
+  })();
+</script>
 </head>
 <body>
 <header class="site">
