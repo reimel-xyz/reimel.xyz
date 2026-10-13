@@ -80,6 +80,9 @@ const T = {
   scanStuck: "Still nothing? Tap \"I can't scan it\": you're clocked in, and your manager sees it had no scan.",
   cancel: "Cancel",
   gettingLocation: "Getting your location",
+  // Location is required to clock in and to finish (13-10-26): blocked in the browser, nothing is recorded.
+  locationNeeded: (doing) => `To ${doing}, Crew+ checks once that your phone is at work, and this browser is blocking your location. Allow location for this page in the browser's settings (on an iPhone: Settings, Privacy & Security, Location Services, Safari Websites), then try again.` + (doing === "finish" ? " Until then you're still clocked in." : ""),
+  finishChecked: (role) => role === "OWNER" ? null : role === "SUPERVISOR" ? "Finished. Your phone wasn't confirmed at work, so the owner will check it." : "Finished. Your phone wasn't confirmed at work, so your manager will check it.",
   clockedIn: "Clocked in.",
   savedOffline: "Saved on this phone. It goes up as soon as you have signal.",
   waiting: (n) => n === 1 ? "1 clock event is saved on this phone and goes up as soon as you have signal." : `${n} clock events are saved on this phone and go up as soon as you have signal.`,
@@ -161,8 +164,12 @@ class DemoApi {
     if (p.p_kind === "OUT" && st === "NOT_WORKING") throw { code: "P0001", message: "You're not clocked in." };
     const code = (p.p_code ?? "").toUpperCase();
     // The Android app's own demo site code (data/local/DemoSeed), so the app's printed demo sign works in this demo too.
-    const proved = p.p_kind === "IN" && code === "DEMP234567" ? (p.p_method ?? "QR") : "NONE";
-    const ev = { id: p.p_client_id, kind: p.p_kind, atMillis: p.p_offline ? Date.parse(p.p_device_time) : Date.now(), siteCheck: proved, location: p.p_location ?? "UNAVAILABLE", recordedOffline: !!p.p_offline };
+    // A finish keeps its evidence as the server's clock() does since 0028: the sign, else the button.
+    const located = p.p_kind === "IN" || (p.p_kind === "OUT" && ["TAG", "QR", "BUTTON"].includes(p.p_method));
+    const proved = !located ? "NONE"
+      : code === "DEMP234567" && p.p_method !== "BUTTON" ? (p.p_method ?? "QR")
+      : p.p_kind === "OUT" ? "BUTTON" : "NONE";
+    const ev = { id: p.p_client_id, kind: p.p_kind, atMillis: p.p_offline ? Date.parse(p.p_device_time) : Date.now(), siteCheck: proved, location: located ? (p.p_location ?? "UNAVAILABLE") : "UNAVAILABLE", recordedOffline: !!p.p_offline };
     this.rows.push(ev);
     return ev;
   }
@@ -374,30 +381,56 @@ async function tap(kind, extra = {}) {
   render();
 }
 
-// ---------------------------------------------------------------- clock in: sign, location, queue
+// ---------------------------------------------------------------- clock in and finish: sign, location, queue
 
+/**
+ * One position, or null when there is none to be had (no fix, a timeout), or { denied: true } when the browser refuses
+ * this page location. 🚨 Location is REQUIRED to clock in and to finish (13-10-26, Albo: "otherwise they can do it from
+ * home"): a refusal stops there, and only a reading that fails is recorded and flagged. A browser cannot tell a faked
+ * position from a real one; the Android app can, and records it as FAKED.
+ */
 function position() {
   return new Promise((resolve) => {
     if (!navigator.geolocation) return resolve(null);
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, acc: p.coords.accuracy }),
-      () => resolve(null),
+      (e) => resolve(e?.code === 1 ? { denied: true } : null),
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
     );
   });
 }
 
-async function clockInWith(code, method) {
-  dropCode();
-  sheet = false;
+/** Reads the position for a clock in or finish: the site check's answer, or null when the browser refused it. */
+async function locate() {
   busy = true;
   note = T.gettingLocation;
   render();
   const pos = await position();
-  const location = pos && view?.sites?.length ? R.siteCheck(view.sites, pos.lat, pos.lon, pos.acc) : "UNAVAILABLE";
   busy = false;
   note = null;
+  if (pos?.denied) return null;
+  return pos && view?.sites?.length ? R.siteCheck(view.sites, pos.lat, pos.lon, pos.acc) : "UNAVAILABLE";
+}
+
+async function clockInWith(code, method) {
+  dropCode();
+  sheet = false;
+  const location = await locate();
+  if (location === null) { note = T.locationNeeded("clock in"); render(); return; }
   await tap("IN", { code, method, location });
+}
+
+/**
+ * The finish (13-10-26): the location is read as for a clock in, and BUTTON tells the server this finish asked for one,
+ * so a manager's phone judges it (an older page sent nothing, which the server still stores as "never asked"). The time
+ * is the TAP, not the end of the up-to-eight-second read.
+ */
+async function finishWith() {
+  const at = Date.now();
+  const location = await locate();
+  if (location === null) { note = T.locationNeeded("finish"); render(); return; }
+  await tap("OUT", { method: "BUTTON", location, atMillis: at });
+  if (!note && location !== "INSIDE") { note = T.finishChecked(view?.me?.role); render(); }
 }
 
 async function openScanner() {
@@ -575,7 +608,7 @@ async function act(name, el) {
     case "cant-scan": closeScanner(); await clockInWith(null, "NONE"); return;
     case "break": await tap("BREAK_START"); return;
     case "break-end": await tap("BREAK_END"); return;
-    case "finish": await tap("OUT"); return;
+    case "finish": if (!busy) await finishWith(); return;
     case "dismiss": {
       const id = el.dataset.id;
       await Q.remove(id); queue = await Q.all(); render(); return;
