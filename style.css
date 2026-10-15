@@ -120,7 +120,7 @@ code { background: var(--bg-soft); padding: 1px 6px; border-radius: 5px; font-si
 .hero.banner h1 { color: #ffffff; }
 .hero.banner .lede { color: #c9d6ee; }
 .hero.banner .btn { background: #0D66FF; color: #ffffff; }
-.hero.banner .btn:hover { background: #2a7dff; color: #ffffff; }
+.hero.banner .btn:hover { background: #0A5BE0; color: #ffffff; } /* darker, not lighter: white on #2a7dff was 3.8:1, under WCAG AA's 4.5:1 for 15px text; #0A5BE0 is 5.9:1 (Impeccable scan 15-10-26) */
 .hero.banner .cta a:not(.btn) { color: #7fd3ff; }
 .hero.banner .cta a:not(.btn):hover { color: #b9e9ff; }
 .banner-mark { width: 168px; height: 168px; display: block; }
