@@ -4,7 +4,8 @@
 //   Clocking.locationCheck -> locationCheck(lat, lon, accuracy, site)
 //   SiteCode.parse   -> parseSiteCode(text)
 //   Outbox.asOffline / Net.isRefusal -> asOffline(ageMs, earlierWentOffline), isRefusal(code)
-// Pure functions, no DOM, no network: `node --test test/rules.test.mjs` runs them on the PC.
+//   ClockQueue.waiting(personId) -> toSend(rows, personId)  (and rowsOf, claimLegacy, unclaimed: the queue's owner)
+// Pure functions, no DOM, no network: `node --test test/rules.test.mjs test/queue.test.mjs` runs them on the PC.
 
 export const KIND = ["IN", "BREAK_START", "BREAK_END", "OUT"];
 
@@ -131,6 +132,42 @@ export function asOffline(ageMs, earlierWentOffline) {
  */
 export function isRefusal(code) {
   return typeof code === "string" && /^(P0|42|23|22)[0-9A-Z]*$/.test(code);
+}
+
+// 🚨 A queued row belongs to a PERSON (15-10-26; the Android app's rule since its 18-09-26 audit, ClockQueue). It is
+// tagged with the signed-in person's id when it is queued; a flush sends only that person's rows, under their own login;
+// Home shows only theirs. Another person's rows wait on this phone for them and nothing of them is shown. Until then the
+// page sent every row under whoever was signed in, so on a shared tablet or a borrowed phone, A's clock in saved with no
+// signal went up as B's the moment B signed in.
+
+/** [personId]'s rows, waiting and refused, oldest first. Nobody else's, and never an unclaimed one. */
+export function rowsOf(rows, personId) {
+  if (!personId) return [];
+  return rows.filter((r) => r.personId === personId).sort((a, b) => a.atMillis - b.atMillis);
+}
+
+/** What a flush may send while [personId] is signed in: their rows the server has not refused, oldest first. */
+export function toSend(rows, personId) {
+  return rowsOf(rows, personId).filter((r) => !r.refused);
+}
+
+/**
+ * Rows queued before 15-10-26 carry no person. Each is given, once, to the person on the card the page last wrote
+ * ([lastPersonId]: whoever was signed in when the update arrived). Under the old page any earlier person's rows went up
+ * the moment the next person signed in, so a row still here was made by that person unless a send failed for some other
+ * reason in between. With no card there is no one to give them to: they are UNCLAIMED, sent by no one, shown to whoever
+ * is signed in so the person who made one can tell the manager. 🚨 Decided once and written back: a later sign-in must
+ * never inherit them. Returns the rows to write back.
+ */
+export function claimLegacy(rows, lastPersonId) {
+  return rows
+    .filter((r) => r.personId === undefined && !r.unclaimed)
+    .map((r) => (lastPersonId ? { ...r, personId: lastPersonId } : { ...r, personId: null, unclaimed: true }));
+}
+
+/** The rows no person could be found for (claimLegacy): never sent, oldest first. */
+export function unclaimed(rows) {
+  return rows.filter((r) => r.unclaimed).sort((a, b) => a.atMillis - b.atMillis);
 }
 
 /** Monday 00:00 of the week [dayMs] falls in, in the given zone, as the ISO date "2026-10-05". */

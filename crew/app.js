@@ -4,9 +4,10 @@
 //
 // Phone first, as the app (README "Phone-first clocking"): a tap writes a row to the queue (IndexedDB) and the screen
 // redraws off it; the send is behind it. A row the server REFUSED (a rule) is kept with the reason; one that could not
-// be sent waits for signal. With no signal the page opens from the service worker's copy and draws from the card
-// (localStorage), the browser's twin of the app's offline card. 🚨 iPhone can throw stored data away after a week of
-// disuse unless the page is added to the Home Screen: the install tip says so.
+// be sent waits for signal. A row belongs to the person who made it: it goes up under their login and no other, and
+// only they see it (R.toSend, 15-10-26). With no signal the page opens from the service worker's copy and draws from
+// the card (localStorage), the browser's twin of the app's offline card. 🚨 iPhone can throw stored data away after a
+// week of disuse unless the page is added to the Home Screen: the install tip says so.
 //
 // `?demo=1` runs against an in-page pretend server (DemoApi) with no login and no network: the walk-through for a
 // browser on the PC and for showing the screens to a business.
@@ -90,7 +91,14 @@ const T = {
   ok: "OK",
   signedInAs: (email) => `Signed in as ${email}`,
   signOut: "Sign out",
-  signOutAsk: "Sign out? You'll need your email and password to sign in again. A clock in saved on this phone with no signal waits here until you do.",
+  // Only this person's rows are counted: a row goes up under its maker's login and no other (R.toSend, 15-10-26).
+  signOutAsk: (n) => n === 0 ? "Sign out? You'll need your email and password to sign in again."
+    : (n === 1 ? "Sign out? 1 clock event you saved with no signal hasn't gone up yet. It stays on this phone and goes up only when you sign in here again"
+      : `Sign out? ${n} clock events you saved with no signal haven't gone up yet. They stay on this phone and go up only when you sign in here again`)
+      + ", never as anyone else. You'll need your email and password to do that.",
+  // A row from before 15-10-26 whose maker cannot be known (R.claimLegacy): shown to whoever is signed in, sent by no one.
+  unclaimed: (what) => `A clock event saved on this phone earlier didn't go up, and the phone can't tell whose it is, so it won't send it: ${what}. If it's yours, tell your manager, then tap OK.`,
+  kinds: { IN: "Clock in", BREAK_START: "Break", BREAK_END: "End of break", OUT: "Finish" },
   installTitle: "Keep it like an app",
   installIos: "Tap Share, then \"Add to Home Screen\". It then opens from your Home Screen and keeps working with no signal.",
   demo: "Demo: a pretend company on this phone, nothing is sent anywhere.",
@@ -144,7 +152,12 @@ class SupabaseApi {
   }
 }
 
-/** The pretend server for the demo: one worker, one site, events kept in memory, no network at all. */
+/**
+ * The pretend server for the demo: one site, events kept in memory, no network at all. Any email signs in as a pretend
+ * worker of its own (alex@example.com, the default, is Alex Morgan), so a shared phone can be walked with two sign-ins.
+ * As the real clock(), an event is recorded as the SIGNED-IN person's, whoever made the row on the phone: that is what
+ * let one worker's queued clock in go up as another's before 15-10-26, and what the walk shows no longer happens.
+ */
 class DemoApi {
   constructor() {
     this.user = null;
@@ -152,18 +165,25 @@ class DemoApi {
     this.site = { id: "site", name: "Main site", latitude: 51.063, longitude: -0.3258, radiusMetres: 150 };
   }
   async wait() { await new Promise((r) => setTimeout(r, 350)); if (!navigator.onLine) throw new TypeError("Failed to fetch"); }
+  login(email) { const e = (email || "alex@example.com").trim().toLowerCase(); this.user = { user: { id: `demo-user-${e}`, email: e } }; }
+  person() {
+    const local = (this.user?.user?.email ?? "alex@example.com").split("@")[0];
+    const name = local === "alex" ? "Alex Morgan" : local.split(/[^a-z]+/i).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(" ") || "Sam";
+    return { id: `demo-${local}`, name, role: "WORKER", company_id: "demo-co" };
+  }
   async session() { return this.user; }
-  async signIn(email) { await this.wait(); this.user = { user: { id: "demo-user", email: email || "alex@example.com" } }; }
+  async signIn(email) { await this.wait(); this.login(email); }
   async signOut() { this.user = null; }
   async sendReset() { await this.wait(); }
-  async reset() { await this.wait(); this.user = { user: { id: "demo-user", email: "alex@example.com" } }; }
-  async me() { await this.wait(); return { id: "demo-alex", name: "Alex Morgan", role: "WORKER", company_id: "demo-co" }; }
+  async reset() { await this.wait(); this.login("alex@example.com"); }
+  async me() { await this.wait(); return this.person(); }
   async company() { return { id: "demo-co", name: "Waves Car Wash (demo)", plan: "clock" }; }
   async sites() { return [this.site]; }
-  async events() { return this.rows.slice(); }
+  async events(personId) { return this.rows.filter((r) => r.personId === personId).map(({ personId: _, ...e }) => e); }
   async clock(p) {
     await this.wait();
-    const st = R.state(this.rows, Date.now());
+    const personId = this.person().id;
+    const st = R.state(this.rows.filter((r) => r.personId === personId), Date.now());
     if (p.p_kind === "BREAK_START" && st !== "WORKING") throw { code: "P0001", message: "You're not clocked in." };
     if (p.p_kind === "BREAK_END" && st !== "ON_BREAK") throw { code: "P0001", message: "You're not on a break." };
     if (p.p_kind === "OUT" && st === "NOT_WORKING") throw { code: "P0001", message: "You're not clocked in." };
@@ -175,7 +195,7 @@ class DemoApi {
       : code === "DEMP234567" && p.p_method !== "BUTTON" ? (p.p_method ?? "QR")
       : p.p_kind === "OUT" ? "BUTTON" : "NONE";
     const ev = { id: p.p_client_id, kind: p.p_kind, atMillis: p.p_offline ? Date.parse(p.p_device_time) : Date.now(), siteCheck: proved, location: located ? (p.p_location ?? "UNAVAILABLE") : "UNAVAILABLE", recordedOffline: !!p.p_offline };
-    this.rows.push(ev);
+    this.rows.push({ ...ev, personId });
     return ev;
   }
 }
@@ -228,7 +248,7 @@ let screen = "loading"; // loading | signin | forgot | reset | noteam | home
 let busy = false;
 let msg = null;          // { tone, text } on the sign-in screens
 let note = null;         // a short line on Home after a tap
-let view = null;         // { me, company, sites, events, email }
+let view = null;         // { me, company, sites, events, email, uid }
 let queue = [];
 let sheet = false;
 let photoOffer = false;  // the live camera was refused on this device: the sheet also offers a photo of the sign
@@ -263,9 +283,9 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&
 const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
 const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
 
-/** The events the screen reasons from: the server's, plus the rows still waiting here (phone first). */
+/** The events the screen reasons from: the server's, plus this person's rows still waiting here (phone first). */
 function effectiveEvents() {
-  const pending = queue.filter((r) => !r.refused).map((r) => ({ id: r.id, kind: r.kind, atMillis: r.atMillis, siteCheck: r.method ?? "NONE", location: r.location ?? "UNAVAILABLE", recordedOffline: true }));
+  const pending = R.toSend(queue, view?.me?.id).map((r) => ({ id: r.id, kind: r.kind, atMillis: r.atMillis, siteCheck: r.method ?? "NONE", location: r.location ?? "UNAVAILABLE", recordedOffline: true }));
   const ids = new Set(pending.map((p) => p.id));
   return [...(view?.events ?? []).filter((e) => !ids.has(e.id)), ...pending];
 }
@@ -275,6 +295,13 @@ function effectiveEvents() {
 async function start() {
   if ("serviceWorker" in navigator && !DEMO) navigator.serviceWorker.register("sw.js").catch(() => { /* the page still works without it */ });
   queue = await Q.all().catch(() => []);
+  // 🚨 Rows from before 15-10-26 carry no person: each goes to the person on the card the last page wrote, else to no
+  // one (R.claimLegacy). Decided HERE, before a dead login clears the card below, and written back once.
+  const legacy = R.claimLegacy(queue, card.read()?.me?.id ?? null);
+  if (legacy.length) {
+    await Promise.all(legacy.map((r) => Q.update(r))).catch(() => { /* tried again on the next open */ });
+    queue = await Q.all().catch(() => queue);
+  }
   // Attached before any screen is chosen: a sign-in later in the page's life must still flush on signal.
   window.addEventListener("online", () => flush());
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && screen === "home") { refresh(); flush(); } });
@@ -309,7 +336,8 @@ async function refresh(session) {
     const [company, sites] = await Promise.all([api.company(), api.sites()]);
     const since = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString();
     const events = await api.events(me.id, since);
-    view = { me, company, sites, events, email: s.user.email };
+    // uid: the login this person was read under, which a flush checks against the login it is about to send with.
+    view = { me, company, sites, events, email: s.user.email, uid: s.user.id };
     card.write(view);
     screen = "home";
     render();
@@ -327,6 +355,7 @@ function startPolling() {
   pollTimer = setInterval(() => { if (document.visibilityState === "visible" && screen === "home") refresh(); }, 20000);
 }
 
+/** The queue stays: this person's rows wait here for them to sign in again, and no one else's login sends them. */
 async function signedOut() {
   clearInterval(pollTimer);
   await api.signOut();
@@ -334,6 +363,9 @@ async function signedOut() {
   view = null;
   screen = "signin";
   msg = null;
+  // The last tap's line ("Saved on this phone...") is about this person: the next one to sign in must not see it.
+  note = null;
+  sheet = false;
   render();
 }
 
@@ -343,7 +375,14 @@ async function flush() {
   if (flushing || DEMO && !navigator.onLine) return;
   flushing = true;
   try {
-    const rows = (await Q.all()).filter((r) => !r.refused);
+    // 🚨 Only the signed-in person's rows, under their own login and no other (R.toSend): before 15-10-26 every row
+    // went up under whoever was signed in, so A's clock in saved with no signal became B's once B signed in on the
+    // same phone. The login is read again here, not trusted from the card: another tab of this browser can sign
+    // someone else in, and the server records an event as the LOGIN's person, whoever's row it was.
+    const s = await api.session().catch(() => null);
+    const me = view?.me?.id;
+    if (!s || !me || s.user?.id !== view.uid) return;
+    const rows = R.toSend(await Q.all(), me);
     let offline = false;
     for (const r of rows) {
       offline = R.asOffline(Date.now() - r.atMillis, offline);
@@ -374,7 +413,10 @@ async function flush() {
 }
 
 async function tap(kind, extra = {}) {
-  const row = { id: uuid(), kind, atMillis: Date.now(), queuedAt: Date.now(), ...extra };
+  // The row is the signed-in person's from the moment it exists, and only their flush sends it (R.toSend).
+  const personId = view?.me?.id;
+  if (!personId) return; // Home is drawn only for a known person, so a tap without one has nowhere to belong
+  const row = { id: uuid(), kind, atMillis: Date.now(), queuedAt: Date.now(), ...extra, personId };
   await Q.add(row);
   queue = await Q.all();
   render();
@@ -615,11 +657,13 @@ async function act(name, el) {
     case "break-end": await tap("BREAK_END"); return;
     case "finish": if (!busy) await finishWith(); return;
     case "dismiss": {
-      const id = el.dataset.id;
-      await Q.remove(id); queue = await Q.all(); render(); return;
+      // Only a row this person is shown: their own refused one, or an unclaimed one (R.unclaimed).
+      const row = queue.find((q) => q.id === el.dataset.id);
+      if (row && (row.unclaimed || row.personId === view?.me?.id)) await Q.remove(row.id);
+      queue = await Q.all(); render(); return;
     }
     case "note-ok": note = null; render(); return;
-    case "signout": if (confirm(T.signOutAsk)) await signedOut(); return;
+    case "signout": if (confirm(T.signOutAsk(R.toSend(queue, view?.me?.id).length))) await signedOut(); return;
     default: return;
   }
 }
@@ -703,8 +747,12 @@ function homeHtml() {
   const weekMinutes = sess.filter((s) => s.outMillis !== null && R.dayIso(s.inMillis, ZONE) >= weekStart).reduce((a, s) => a + R.workedMinutes(s), 0);
   const first = (view?.me?.name ?? "").split(" ")[0] || "there";
   const initial = first.slice(0, 1).toUpperCase();
-  const waiting = queue.filter((r) => !r.refused).length;
-  const refused = queue.filter((r) => r.refused);
+  // This person's rows only: another person's wait on this phone with nothing of them shown (R.rowsOf).
+  const mine = R.rowsOf(queue, view?.me?.id);
+  const waiting = mine.filter((r) => !r.refused).length;
+  const refused = mine.filter((r) => r.refused);
+  const strays = R.unclaimed(queue);
+  const what = (r) => `${T.kinds[r.kind] ?? r.kind}, ${fmtDay.format(new Date(r.atMillis))} ${fmtTime.format(new Date(r.atMillis))}`;
   let tile;
   if (st === "NOT_WORKING") {
     tile = `<div class="state"><span class="dot"></span>${esc(T.notClockedIn)}</div><h1>${esc(T.hi(first))}</h1>
@@ -724,6 +772,7 @@ function homeHtml() {
     ${note ? `<div class="notice info">${esc(note)}<button class="dismiss" data-act="note-ok">${esc(T.ok)}</button></div>` : ""}
     ${waiting ? `<div class="notice warn">${esc(T.waiting(waiting))}</div>` : ""}
     ${refused.map((r) => `<div class="notice bad">${esc(r.refused)}<button class="dismiss" data-act="dismiss" data-id="${esc(r.id)}">${esc(T.ok)}</button></div>`).join("")}
+    ${strays.map((r) => `<div class="notice warn">${esc(T.unclaimed(what(r)))}<button class="dismiss" data-act="dismiss" data-id="${esc(r.id)}">${esc(T.ok)}</button></div>`).join("")}
   </div>
   ${isIos && !standalone ? `<div class="card install"><strong>${esc(T.installTitle)}</strong><p class="small muted">${esc(T.installIos)}</p></div>` : ""}
   <p class="foot">${esc(T.signedInAs(view?.email ?? ""))} · <button data-act="signout">${esc(T.signOut)}</button><br><a href="${PRIVACY_URL}">${esc(T.privacy)}</a> · ${esc(T.ukTime)}</p>`;

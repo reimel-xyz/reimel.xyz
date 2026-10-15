@@ -3,10 +3,12 @@
 //
 // 🚨 Our own files are served from the copy and refreshed behind it (stale-while-revalidate), so a fix put on the
 // site reaches a phone on its SECOND open after the deploy, with no cache name to bump and nothing to tell staff.
-// The two libraries are files of this folder since 15-10-26 (they came from jsDelivr, which every open contacted:
-// the refresh below ran for them too), so they are refreshed like the rest. The cache name moved to v2 that once,
-// only so the old jsDelivr copies are thrown away; the queue and the card live elsewhere and are not touched.
-const SHELL = "crew-web-v2";
+// 🚨 EXCEPT when files depend on each other's NEW code (app.js calling a function rules.js only now exports): the
+// refresh fetches each file on its own, so a phone that loses signal between two of them keeps a mix that breaks
+// offline. Then bump the name: the new worker's install copies the whole list in one go (addAll is all or nothing)
+// and throws the old copy away. v2 (15-10-26): the jsDelivr copies dropped. v3 (15-10-26): the per-person queue,
+// app.js and rules.js together. The queue and the card live elsewhere and are never touched by a bump.
+const SHELL = "crew-web-v3";
 const FILES = [
   "./",
   "./index.html",
