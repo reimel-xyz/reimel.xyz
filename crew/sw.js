@@ -3,19 +3,21 @@
 //
 // 🚨 Our own files are served from the copy and refreshed behind it (stale-while-revalidate), so a fix put on the
 // site reaches a phone on its SECOND open after the deploy, with no cache name to bump and nothing to tell staff.
-// The two libraries are pinned by version in their URL, so their copy is final (cache-first).
-const SHELL = "crew-web-v1";
+// The two libraries are files of this folder since 15-10-26 (they came from jsDelivr, which every open contacted:
+// the refresh below ran for them too), so they are refreshed like the rest. The cache name moved to v2 that once,
+// only so the old jsDelivr copies are thrown away; the queue and the card live elsewhere and are not touched.
+const SHELL = "crew-web-v2";
 const FILES = [
   "./",
   "./index.html",
   "./app.js",
   "./rules.js",
   "./config.js",
+  "./supabase-js-2.49.4.js",
+  "./jsQR-1.4.0.js",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png",
-  "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js",
-  "https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js",
 ];
 
 self.addEventListener("install", (event) => {
@@ -31,16 +33,13 @@ self.addEventListener("fetch", (event) => {
   // The server: network only, nothing stored.
   if (url.hostname.endsWith(".supabase.co")) return;
   if (event.request.method !== "GET") return;
-  const ours = url.origin === self.location.origin;
-  const lib = url.hostname === "cdn.jsdelivr.net";
-  if (!ours && !lib) return;
+  if (url.origin !== self.location.origin) return;
   event.respondWith(
     caches.match(event.request, { ignoreSearch: true }).then((hit) => {
       const fresh = fetch(event.request).then((res) => {
         if (res.ok) caches.open(SHELL).then((c) => c.put(event.request, res.clone()));
         return res;
       });
-      if (hit && lib) return hit;
       if (hit) { event.waitUntil(fresh.catch(() => {})); return hit; }
       return fresh;
     }),

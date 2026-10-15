@@ -95,7 +95,12 @@ const T = {
   installIos: "Tap Share, then \"Add to Home Screen\". It then opens from your Home Screen and keeps working with no signal.",
   demo: "Demo: a pretend company on this phone, nothing is sent anywhere.",
   ukTime: "Times are UK time.",
+  privacy: "Your data and privacy",
 };
+
+// The staff privacy notice (15-10-26), the same words as the app's "Your data and privacy". A full address, so the link
+// also works from the PC demo; it is outside the worker's scope, so an installed page opens it in a browser view.
+const PRIVACY_URL = "https://reimel.xyz/privacy/crew.html";
 
 // ---------------------------------------------------------------- the two doors to the server
 
@@ -663,7 +668,7 @@ function signInHtml() {
     <div class="row"><button class="btn primary" data-act="signin" ${busy ? "disabled" : ""}>${esc(busy ? T.oneMoment : T.signIn)}</button></div>
     <div class="row"><button class="btn text" data-act="to-forgot">${esc(T.forgot)}</button></div>
   </div>
-  <p class="foot">${esc(T.ukTime)}</p>`;
+  <p class="foot"><a href="${PRIVACY_URL}">${esc(T.privacy)}</a><br>${esc(T.ukTime)}</p>`;
 }
 
 function forgotHtml() {
@@ -721,7 +726,7 @@ function homeHtml() {
     ${refused.map((r) => `<div class="notice bad">${esc(r.refused)}<button class="dismiss" data-act="dismiss" data-id="${esc(r.id)}">${esc(T.ok)}</button></div>`).join("")}
   </div>
   ${isIos && !standalone ? `<div class="card install"><strong>${esc(T.installTitle)}</strong><p class="small muted">${esc(T.installIos)}</p></div>` : ""}
-  <p class="foot">${esc(T.signedInAs(view?.email ?? ""))} · <button data-act="signout">${esc(T.signOut)}</button><br>${esc(T.ukTime)}</p>`;
+  <p class="foot">${esc(T.signedInAs(view?.email ?? ""))} · <button data-act="signout">${esc(T.signOut)}</button><br><a href="${PRIVACY_URL}">${esc(T.privacy)}</a> · ${esc(T.ukTime)}</p>`;
 }
 
 function sheetHtml() {
@@ -743,6 +748,9 @@ document.addEventListener("click", (e) => {
 document.addEventListener("change", (e) => {
   if (e.target.matches?.("[data-photo]")) readPhoto(e.target.files?.[0]);
 });
+// Safari on an iPhone gives a tapped element its :active look (the buttons' press feedback, index.html) only on a page
+// that listens for touches, and the grey tap flash is switched off; this empty listener is what turns it on.
+document.addEventListener("touchstart", () => {}, { passive: true });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Enter") return;
   if (screen === "signin") act("signin");
