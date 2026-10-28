@@ -104,6 +104,26 @@ const T = {
   demo: "Demo: a pretend company on this phone, nothing is sent anywhere.",
   ukTime: "Times are UK time.",
   privacy: "Your data and privacy",
+  // Delete my account (27-10-26, HR_SPEC 12a): the same words as the Android app's dialog (ui/components/DeleteAccountDialog).
+  deleteAccount: "Delete my account",
+  deleteLogin: "Delete this login",
+  deleteTitle: "Delete your account?",
+  deleteGoes: "Goes: your login, and the phone number, email and photo on your profile. Your can't-work days and any open shift you asked for go too.",
+  deleteStays: (company) => `Stays with ${company}: your shifts, clock ins, holiday and sick requests, contracts, signatures and documents. Employers have to keep these records for a time, so they aren't deleted. You stay on the team list without a login, and ${company} is told.`,
+  deleteGoesNoTeam: "Goes: your login.",
+  deleteStaysNoTeam: "A team you worked for keeps its work records about you for the time the law asks.",
+  yourPassword: "Your password",
+  deleteConfirm: "Delete account",
+  keepAccount: "Keep account",
+  deleteWaiting: "A clock in saved on this phone hasn't reached the server yet. Try again when you have signal.",
+  deleteFailed: "Your account wasn't deleted. Try again in a minute.",
+  wrongPassword: "That password isn't right.",
+  deleted: "Your account is deleted. Your employer keeps your work records for the time the law asks.",
+  // The owner's two ways (Albo, 27-10-26): the same words as the app's OwnerDeleteDialog.
+  ownerDeleteIntro: (company) => `You own ${company}, and its records hang on your account. There are two ways.`,
+  ownerHandOver: "To keep the company going: in the Crew+ app, make someone else the owner (Team, their page, Role), then change your own role. You can then delete your account like anyone.",
+  ownerClose: "To close the company: we send you a copy of its records, then delete the company, everything in it and its staff's logins within 30 days. Keep what the law asks you to keep first: pay records for six years, and any contracts or documents you need.",
+  closeCompany: "Close the company",
 };
 
 // The staff privacy notice (15-10-26), the same words as the app's "Your data and privacy". A full address, so the link
@@ -127,6 +147,27 @@ class SupabaseApi {
     try { Object.keys(localStorage).filter((k) => k.startsWith("sb-")).forEach((k) => localStorage.removeItem(k)); } catch { /* nothing to clear */ }
   }
   async sendReset(email) { const { error } = await this.client.auth.resetPasswordForEmail(email); if (error) throw error; }
+  /**
+   * Delete this login (27-10-26; server 0031 and functions/crew-delete-account). The password is checked by signing in
+   * again with it: the function accepts only a sign-in from the last ten minutes, so the password never travels to it.
+   * Throws the function's own words (an owner, a failure part way) for the screen.
+   */
+  async deleteAccount(password) {
+    const email = (await this.session())?.user?.email;
+    if (!email) throw new Error(T.deleteFailed);
+    await this.signIn(email, password);
+    const token = (await this.session())?.access_token;
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/crew-delete-account`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+      body: "{}",
+    });
+    if (!res.ok) {
+      let words = null;
+      try { words = (await res.json()).error; } catch { /* not JSON: the general words below */ }
+      throw new Error(words || T.deleteFailed);
+    }
+  }
   async reset(email, code, password) {
     let r = await this.client.auth.verifyOtp({ type: "recovery", email, token: code });
     if (r.error) throw r.error;
@@ -169,11 +210,13 @@ class DemoApi {
   person() {
     const local = (this.user?.user?.email ?? "alex@example.com").split("@")[0];
     const name = local === "alex" ? "Alex Morgan" : local.split(/[^a-z]+/i).filter(Boolean).map((w) => w[0].toUpperCase() + w.slice(1).toLowerCase()).join(" ") || "Sam";
-    return { id: `demo-${local}`, name, role: "WORKER", company_id: "demo-co" };
+    // owner@example.com is the pretend owner (27-10-26), so the owner's Delete my account page can be walked too.
+    return { id: `demo-${local}`, name, role: local === "owner" ? "OWNER" : "WORKER", company_id: "demo-co" };
   }
   async session() { return this.user; }
   async signIn(email) { await this.wait(); this.login(email); }
   async signOut() { this.user = null; }
+  async deleteAccount() { await this.wait(); }
   async sendReset() { await this.wait(); }
   async reset() { await this.wait(); this.login("alex@example.com"); }
   async me() { await this.wait(); return this.person(); }
@@ -244,7 +287,8 @@ const card = {
 
 // ---------------------------------------------------------------- state
 
-let screen = "loading"; // loading | signin | forgot | reset | noteam | home
+let screen = "loading"; // loading | signin | forgot | reset | noteam | home | delete
+let deleteFrom = "home"; // where Keep account goes back to: home, or noteam for a login on no team
 let busy = false;
 let msg = null;          // { tone, text } on the sign-in screens
 let note = null;         // a short line on Home after a tap
@@ -664,6 +708,35 @@ async function act(name, el) {
     }
     case "note-ok": note = null; render(); return;
     case "signout": if (confirm(T.signOutAsk(R.toSend(queue, view?.me?.id).length))) await signedOut(); return;
+    case "to-delete": deleteFrom = screen; screen = "delete"; msg = null; render(); return;
+    case "keep-account": if (!busy) { screen = deleteFrom; msg = null; render(); } return;
+    case "delete": {
+      const password = document.getElementById("delpw")?.value ?? "";
+      if (!password || busy) return;
+      const meId = view?.me?.id;
+      // A clock in saved with no signal is the employer's record, and after the delete no login could send it.
+      if (meId) {
+        await flush();
+        queue = await Q.all();
+        if (R.toSend(queue, meId).length) { msg = { tone: "warn", text: T.deleteWaiting }; render(); return; }
+      }
+      busy = true; msg = null; render();
+      try {
+        await api.deleteAccount(password);
+        // Their refused rows, kept for them to read, have nobody to read them now.
+        for (const r of meId ? R.rowsOf(queue, meId) : []) await Q.remove(r.id);
+        queue = await Q.all();
+        busy = false;
+        await signedOut();
+        msg = { tone: "info", text: T.deleted };
+        render();
+      } catch (e) {
+        busy = false;
+        msg = { tone: "bad", text: /Invalid login credentials/i.test(String(e?.message ?? "")) ? T.wrongPassword : plain(e) };
+        render();
+      }
+      return;
+    }
     default: return;
   }
 }
@@ -689,12 +762,13 @@ function render() {
   else if (screen === "signin") html += signInHtml();
   else if (screen === "forgot") html += forgotHtml();
   else if (screen === "reset") html += resetHtml();
-  else if (screen === "noteam") html += `<div class="card"><h1>${esc(APP_NAME)}</h1><p>${esc(T.noTeam)}</p><div class="row"><button class="btn outline" data-act="signout">${esc(T.signOut)}</button></div></div>`;
+  else if (screen === "noteam") html += `<div class="card"><h1>${esc(APP_NAME)}</h1><p>${esc(T.noTeam)}</p><div class="row"><button class="btn outline" data-act="signout">${esc(T.signOut)}</button></div><div class="row"><button class="btn text" data-act="to-delete">${esc(T.deleteLogin)}</button></div></div>`;
+  else if (screen === "delete") html += deleteHtml();
   else html += homeHtml();
   if (sheet) html += sheetHtml();
   // Keep what was typed: the sign-in screens re-render only on a message or a busy change, so values are restored.
   const typed = {};
-  ["email", "password", "code", "p1", "p2"].forEach((id) => { const e = document.getElementById(id); if (e) typed[id] = e.value; });
+  ["email", "password", "code", "p1", "p2", "delpw"].forEach((id) => { const e = document.getElementById(id); if (e) typed[id] = e.value; });
   if (html === lastHtml) return;
   lastHtml = html;
   app.innerHTML = html;
@@ -775,7 +849,36 @@ function homeHtml() {
     ${strays.map((r) => `<div class="notice warn">${esc(T.unclaimed(what(r)))}<button class="dismiss" data-act="dismiss" data-id="${esc(r.id)}">${esc(T.ok)}</button></div>`).join("")}
   </div>
   ${isIos && !standalone ? `<div class="card install"><strong>${esc(T.installTitle)}</strong><p class="small muted">${esc(T.installIos)}</p></div>` : ""}
-  <p class="foot">${esc(T.signedInAs(view?.email ?? ""))} · <button data-act="signout">${esc(T.signOut)}</button><br><a href="${PRIVACY_URL}">${esc(T.privacy)}</a> · ${esc(T.ukTime)}</p>`;
+  <p class="foot">${esc(T.signedInAs(view?.email ?? ""))} · <button data-act="signout">${esc(T.signOut)}</button><br><a href="${PRIVACY_URL}">${esc(T.privacy)}</a> · <button data-act="to-delete">${esc(T.deleteAccount)}</button><br>${esc(T.ukTime)}</p>`;
+}
+
+// Delete my account (27-10-26, HR_SPEC 12a): what goes, what stays, the password again, and a red confirm.
+function deleteHtml() {
+  const company = view?.company?.name;
+  // An owner: hand over, or ask us to close the company (the server refuses an active owner's delete).
+  if (view?.me?.role === "OWNER") {
+    const body = `Please close my company on ${APP_NAME}.\n\nCompany: ${company ?? ""}\nCompany id: ${view.company?.id ?? ""}\n`
+      + `Owner: ${view.me.name} (${view.email ?? ""})\n\nI understand that the company, its records and its staff's logins will be deleted, `
+      + "and that I keep what the law asks me to keep first.";
+    const href = `mailto:support@reimel.xyz?subject=${encodeURIComponent(`${APP_NAME}: close my company`)}&body=${encodeURIComponent(body)}`;
+    return `<div class="hero"><div class="kicker">${esc(APP_NAME)}</div><div class="big">${esc(T.deleteTitle)}</div></div>
+  <div class="card">
+    <p>${esc(T.ownerDeleteIntro(company ?? ""))}</p>
+    <p class="muted">${esc(T.ownerHandOver)}</p>
+    <p class="muted">${esc(T.ownerClose)}</p>
+    <div class="row"><a class="btn danger" href="${esc(href)}">${esc(T.closeCompany)}</a></div>
+    <div class="row"><button class="btn text" data-act="keep-account">${esc(T.keepAccount)}</button></div>
+  </div>`;
+  }
+  return `<div class="hero"><div class="kicker">${esc(APP_NAME)}</div><div class="big">${esc(T.deleteTitle)}</div></div>
+  <div class="card">
+    <p>${esc(company ? T.deleteGoes : T.deleteGoesNoTeam)}</p>
+    <p class="muted">${esc(company ? T.deleteStays(company) : T.deleteStaysNoTeam)}</p>
+    <label for="delpw">${esc(T.yourPassword)}</label><input id="delpw" type="password" autocomplete="current-password">
+    ${notice(msg)}
+    <div class="row"><button class="btn danger" data-act="delete" ${busy ? "disabled" : ""}>${esc(busy ? T.oneMoment : T.deleteConfirm)}</button></div>
+    <div class="row"><button class="btn text" data-act="keep-account" ${busy ? "disabled" : ""}>${esc(T.keepAccount)}</button></div>
+  </div>`;
 }
 
 function sheetHtml() {

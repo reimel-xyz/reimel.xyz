@@ -7,7 +7,10 @@
      NOT in sitemap1.xml (a noindex page in a sitemap is a contradiction Search Console flags). Staff reach it from the
      web clock-in and from the app's "Your data and privacy". When Crew+ is announced: drop this line AND add the page
      to sitemap1.xml in the same change.
-     Every claim here was checked against the code and the server on 15-10-26 (HRSuite README, privacy notice). -->
+     Every claim here was checked against the code and the server on 15-10-26 (HRSuite README, privacy notice).
+     27-10-26: "Deleting your account" added from server 0031 and functions/crew-delete-account (HR_SPEC 12a), with
+     its own page for Play's account deletion link (crew-delete-account.html); the two must say the same things. -->
+
 <meta name="robots" content="noindex">
 <link rel="canonical" href="https://reimel.xyz/privacy/crew.html">
 <title>Crew+ &middot; Privacy Notice for Staff &middot; Reimel Ltd</title>
@@ -31,7 +34,7 @@
   <div class="wrap prose">
     <h1>Crew+ Privacy Notice for Staff</h1>
     <div class="meta">
-      <strong>Effective date:</strong> 15 October 2026<br>
+      <strong>Effective date:</strong> 28 October 2026<br>
       <strong>App:</strong> Crew+ (rota, clock in and time off for a business and its staff): the Android app, and the
       web clock-in at <a href="../crew/">reimel.xyz/crew</a><br>
       <strong>Publisher:</strong> Reimel Ltd (company no. 14523345, England and Wales) &middot; <a href="../contact.html">company details</a>
@@ -84,7 +87,10 @@
       you showed.</li>
       <li><strong>Your phone:</strong> a notification address for each phone you sign in on, so Crew+ can send you
       messages about your shifts and time off (see <a href="#others">who else handles it</a>). It is removed when
-      you sign out, or after 60 days unused.</li>
+      you sign out, when you delete your account, or after 60 days unused. From the Android app, also <strong>which
+      phone</strong> each clock in, break and finish came from: its model, and a code made from the phone&rsquo;s own
+      ID for this app, scrambled so it is not the ID itself. A manager sees a clock in from a new phone, or one phone
+      used for two people. Nothing else is read from your phone, and the web clock-in sends neither.</li>
     </ul>
 
     <h2 id="location">Location</h2>
@@ -148,10 +154,10 @@
       <li><strong>Google Firebase Cloud Messaging</strong> carries the notifications the Android app shows. Their words
       pass through Google on the way to the phone: a new rota or a shift reminder for you, and for your managers
       messages such as &ldquo;Alex is off sick today&rdquo;, &ldquo;Alex can&rsquo;t do Mon 19 Oct, 09:00 to
-      17:00&rdquo;, a late start or, for the owner, the day a right to work permission ends. The reason you give for not
-      doing a shift is never in these messages: your managers read it in the app. Messages about a named
-      person&rsquo;s time off, sickness, lateness, a shift they can&rsquo;t do or right to work are hidden on a locked
-      phone. The server keeps the words of each message for 30 days. <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</li>
+      17:00&rdquo;, a late start, &ldquo;Alex deleted their account&rdquo; or, for the owner, the day a right to work
+      permission ends. The reason you give for not doing a shift is never in these messages: your managers read it in
+      the app. Messages about a named person&rsquo;s time off, sickness, lateness, still being clocked in, a shift they
+      can&rsquo;t do, right to work or a deleted account are hidden on a locked phone. The server keeps the words of each message for 30 days. <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>.</li>
       <li><strong>A nightly backup:</strong> each night Reimel Ltd copies the database (not the files, and not the
       logins or passwords) to its own computer in the UK, where each copy is kept for 30 days. Its own backups then
       carry that copy to its Microsoft OneDrive storage and to its own phone. The copy leaves out sign-in tokens,
@@ -162,7 +168,7 @@
     </ul>
     <p>All of it travels encrypted (HTTPS).</p>
 
-    <h2>How long it is kept</h2>
+    <h2 id="kept">How long it is kept</h2>
     <p>Until your employer removes it: nothing that counts as a work or pay record is deleted by itself, because a
     record removed too early is one the law may still ask your employer to have. Minimum wage rules ask employers to
     keep pay records for six years. Right to work copies are kept while you work there and for 2 years after you
@@ -172,6 +178,38 @@
     <p>Removed by themselves: the words of a notification after 30 days, a phone&rsquo;s notification address after
     60 days unused, and each backup copy after 30 days.</p>
 
+    <h2 id="delete">Deleting your account</h2>
+    <p>You can delete your Crew+ account yourself at any time, without asking your employer.</p>
+    <ul>
+      <li><strong>Android app:</strong> tap your picture at the top of Home, then <strong>Delete my account</strong>.</li>
+      <li><strong>Web clock-in:</strong> <strong>Delete my account</strong> at the bottom of Home.</li>
+      <li><strong>A login that isn&rsquo;t on a team</strong> (you never joined one, or you have left): sign in, then
+      <strong>Delete this login</strong>.</li>
+      <li><strong>If you can&rsquo;t sign in:</strong> email
+      <a href="mailto:support@reimel.xyz?subject=Crew%2B%20account%20deletion">support@reimel.xyz</a> from the address
+      you sign in with. We delete the account within 30 days and confirm by email.</li>
+    </ul>
+    <p>You enter your password again to confirm. A clock in saved on your phone with no signal is sent first, and the
+    account isn&rsquo;t deleted until it has gone.</p>
+    <p><strong>Deleted at once:</strong> your login (the email and password you sign in with), the phone number, email
+    address and photo on your profile, each phone&rsquo;s notification address and the notifications kept for you, the
+    days you can&rsquo;t work, an open shift you asked for that nobody has decided yet, and any invite code not yet
+    used.</p>
+    <p><strong>Kept by your employer:</strong> your work and pay records, for the periods in
+    <a href="#kept">How long it is kept</a>: your name, role, job title and dates, your rota and its history, your
+    clock events and any changes to them, your time off, shifts you gave up, your contracts and signatures, your
+    documents, and what the owner alone keeps (your pay rate, date of birth and right to work record). You stay on
+    your employer&rsquo;s team list without a login, and the owner and managers are told that you deleted your
+    account. Backup copies made before the deletion still hold your old details until each copy is removed, after
+    30 days.</p>
+    <p>If you work there again, the owner can invite you, and a new login joins the same records.</p>
+    <p>A business&rsquo;s records hang on its owner&rsquo;s account, so an owner has two ways. To keep the business
+    going, make someone else the owner (Team, their page, Role), change your own role, then delete your account like
+    anyone. To close the business, use <strong>Delete my account</strong> in Settings, then <strong>Close the
+    company</strong>, which sends us the request: we send you a copy of the business&rsquo;s records, then delete the
+    business, everything in it and its staff&rsquo;s logins within 30 days. Keep what the law asks you to keep
+    first.</p>
+
     <h2 id="rights">Your rights</h2>
     <ul>
       <li><strong>See your data:</strong> most of what Crew+ holds about you is on your own screens, and in the
@@ -180,8 +218,10 @@
       history of changes to your shifts and older records: ask your employer for a copy of anything not on your
       screens.</li>
       <li><strong>Correct it:</strong> ask your employer to correct anything that is wrong.</li>
-      <li><strong>Delete it or object:</strong> ask your employer. Some records must be kept for the periods the law
-      sets, even after you leave.</li>
+      <li><strong>Delete your account:</strong> yourself, in the app or the web clock-in (see
+      <a href="#delete">Deleting your account</a>).</li>
+      <li><strong>Delete other records or object:</strong> ask your employer. Some records must be kept for the
+      periods the law sets, even after you leave.</li>
       <li><strong>Complain:</strong> if you are unhappy with how your data is handled, you can complain to the
       Information Commissioner&rsquo;s Office, <a href="https://ico.org.uk/make-a-complaint/">ico.org.uk</a>.</li>
     </ul>

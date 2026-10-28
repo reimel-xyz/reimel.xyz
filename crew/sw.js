@@ -7,8 +7,9 @@
 // refresh fetches each file on its own, so a phone that loses signal between two of them keeps a mix that breaks
 // offline. Then bump the name: the new worker's install copies the whole list in one go (addAll is all or nothing)
 // and throws the old copy away. v2 (15-10-26): the jsDelivr copies dropped. v3 (15-10-26): the per-person queue,
-// app.js and rules.js together. The queue and the card live elsewhere and are never touched by a bump.
-const SHELL = "crew-web-v3";
+// app.js and rules.js together. v4 (27-10-26): Delete my account, app.js with index.html's new red button style. The
+// queue and the card live elsewhere and are never touched by a bump.
+const SHELL = "crew-web-v4";
 const FILES = [
   "./",
   "./index.html",
