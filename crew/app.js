@@ -108,11 +108,16 @@ const T = {
   deleteAccount: "Delete my account",
   deleteLogin: "Delete this login",
   deleteTitle: "Delete your account?",
-  deleteGoes: "Goes: your login, and the phone number, email and photo on your profile. Your can't-work days and any open shift you asked for go too.",
-  deleteStays: (company) => `Stays with ${company}: your shifts, clock ins, holiday and sick requests, contracts, signatures and documents. Employers have to keep these records for a time, so they aren't deleted. You stay on the team list without a login, and ${company} is told.`,
-  deleteGoesNoTeam: "Goes: your login.",
-  deleteStaysNoTeam: "A team you worked for keeps its work records about you for the time the law asks.",
-  yourPassword: "Your password",
+  // Headings and a list since 28-10-26 (Albo's feedback), the same words as the app's dialog.
+  deleteIntro: "You won't be able to sign in with this account again. This can't be undone.",
+  deleteGoesTitle: "What will be deleted",
+  deleteGoes: ["Your login", "The phone number, email and photo on your profile", "Your can't-work days, and any open shift you asked for that hasn't been decided"],
+  deleteKeepsTitle: (company) => `What ${company} keeps`,
+  deleteStays: (company) => `Your work records stay with your employer, ${company}, for as long as the law requires: your shifts, clock ins, holiday and sick requests, contracts, signatures and documents.`,
+  deleteTold: "Your employer is told you deleted your account, and decides whether you stay on their team.",
+  deleteGoesNoTeam: ["Your login"],
+  deleteStaysNoTeam: "A team you worked for keeps its work records about you for as long as the law requires.",
+  yourPassword: "Your password, to confirm",
   deleteConfirm: "Delete account",
   keepAccount: "Keep account",
   deleteWaiting: "A clock in saved on this phone hasn't reached the server yet. Try again when you have signal.",
@@ -872,8 +877,12 @@ function deleteHtml() {
   }
   return `<div class="hero"><div class="kicker">${esc(APP_NAME)}</div><div class="big">${esc(T.deleteTitle)}</div></div>
   <div class="card">
-    <p>${esc(company ? T.deleteGoes : T.deleteGoesNoTeam)}</p>
-    <p class="muted">${esc(company ? T.deleteStays(company) : T.deleteStaysNoTeam)}</p>
+    <p>${esc(T.deleteIntro)}</p>
+    <p class="head">${esc(T.deleteGoesTitle)}</p>
+    <ul class="list">${(company ? T.deleteGoes : T.deleteGoesNoTeam).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+    ${company
+      ? `<p class="head">${esc(T.deleteKeepsTitle(company))}</p><p class="muted">${esc(T.deleteStays(company))}</p><p class="muted">${esc(T.deleteTold)}</p>`
+      : `<p class="muted">${esc(T.deleteStaysNoTeam)}</p>`}
     <label for="delpw">${esc(T.yourPassword)}</label><input id="delpw" type="password" autocomplete="current-password">
     ${notice(msg)}
     <div class="row"><button class="btn danger" data-act="delete" ${busy ? "disabled" : ""}>${esc(busy ? T.oneMoment : T.deleteConfirm)}</button></div>
