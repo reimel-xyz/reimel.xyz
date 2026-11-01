@@ -2,6 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- 🚨 What the page may load and talk to (audit 01-11-26 W-h5): this site and the project's server only, no inline
+     script, no eval, so a future slip in esc() has nowhere to send anything. GitHub Pages sends no headers, so it is a
+     meta tag (frame-ancestors cannot live here; app.js refuses to run inside a frame). 🚨 A new project address in
+     config.js must be written into connect-src too, or every call is blocked. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; media-src 'self' blob: mediastream:; connect-src 'self' https://gplrgrdddmqmttwvmddi.supabase.co wss://gplrgrdddmqmttwvmddi.supabase.co; manifest-src 'self'; worker-src 'self'; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Crew+ clock in</title>
 <meta name="description" content="Clock in and out at work from your phone.">

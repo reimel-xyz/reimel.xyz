@@ -26,21 +26,21 @@ const T = {
   oneMoment: "One moment",
   forgot: "I've forgotten my password",
   forgotTitle: "Forgotten password",
-  forgotLine: "We'll email you a six-digit code.",
+  forgotLine: "We'll email you a code.",
   emailCode: "Email me a code",
   sending: "Sending",
   backToSignIn: "Back to sign in",
   resetTitle: "New password",
   resetLine: "Type the code from the email and choose a new password.",
   codeFromEmail: "Code from the email",
-  sixDigits: "6 digits",
+  codeHint: "The number in the email",
   newPassword: "New password",
   newPasswordAgain: "New password again",
   atLeast: "At least 8 characters",
   mismatch: "The two passwords don't match.",
   setPassword: "Set the new password and sign in",
   sendAgain: "Send the code again",
-  codeSent: "If that email has a login, a six-digit code is on its way to it. It works for an hour.",
+  codeSent: "If that email has a login, a code is on its way to it. It works for an hour.",
   wrongLogin: "That email and password don't match. Check both, or use \"I've forgotten my password\".",
   notConfirmed: "Confirm your email first: open the link in the email you were sent, then sign in.",
   noSignal: "No connection. Check the signal and try again.",
@@ -142,10 +142,12 @@ const DEMO = new URLSearchParams(location.search).has("demo");
 class SupabaseApi {
   constructor() {
     this.client = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+    this.resetUid = null; // the login a reset's code check made (reset below), held in memory only
   }
   async session() { const { data } = await this.client.auth.getSession(); return data.session ?? null; }
   async signIn(email, password) { const { error } = await this.client.auth.signInWithPassword({ email, password }); if (error) throw error; }
   async signOut() {
+    this.resetUid = null;
     // The library clears the stored login only if the server accepted the logout; clear it ourselves whatever happened
     // (the Android app's lesson, audit 09-10-26 H1).
     try { await this.client.auth.signOut({ scope: "local" }); } catch { /* the stored session is removed below regardless */ }
@@ -174,10 +176,21 @@ class SupabaseApi {
     }
   }
   async reset(email, code, password) {
-    let r = await this.client.auth.verifyOtp({ type: "recovery", email, token: code });
-    if (r.error) throw r.error;
-    r = await this.client.auth.updateUser({ password });
-    if (r.error) throw r.error;
+    // Checking the code spends it AND signs the person in, so a second try after a refused password uses that
+    // sign-in, not the spent code (31-10-26, as the app). 🚨 Only the sign-in THIS reset's code made, remembered by
+    // its user id (audit 01-11-26 W-h1): a login merely stored on the phone with the same email proves no code.
+    const now = (await this.client.auth.getSession()).data.session?.user;
+    const proven = !!this.resetUid && now?.id === this.resetUid && (now.email ?? "").toLowerCase() === email.trim().toLowerCase();
+    if (!proven) {
+      this.resetUid = null;
+      const r = await this.client.auth.verifyOtp({ type: "recovery", email, token: code });
+      if (r.error) throw r.error;
+      this.resetUid = r.data?.user?.id ?? r.data?.session?.user?.id ?? null;
+    }
+    const u = await this.client.auth.updateUser({ password });
+    // Their current password typed as the new one: the code proved the email is theirs, so they are signed in with it.
+    if (u.error && u.error.code !== "same_password") throw u.error;
+    this.resetUid = null; // done: a later reset checks a code again
   }
   async me(uid) {
     const { data, error } = await this.client.from("people").select("id, name, role, company_id").eq("user_id", uid);
@@ -191,9 +204,21 @@ class SupabaseApi {
     if (error) throw error;
     return (data ?? []).map(rowToEvent);
   }
-  async clock(params) {
-    const { data, error } = await this.client.rpc("clock", params);
-    if (error) throw error;
+  /**
+   * 🚨 Sent with the token the flush checked for THIS row, never the library's stored login (audit 01-11-26 W1): the
+   * library reads the login from storage on every request, so a sign-out, or a sign-in in another tab, while one row
+   * was still going sent the rest as the next person, or with no login at all ("permission denied", filed as a
+   * refusal for good). Posted by hand like deleteAccount; the server's errors keep their code and words.
+   */
+  async clock(params, token) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/clock`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    let data = null;
+    try { data = await res.json(); } catch { /* an empty or non-JSON answer (a gateway page): decided below */ }
+    if (!res.ok) throw { code: data?.code, message: data?.message ?? `The server answered ${res.status}.` };
     return rowToEvent(Array.isArray(data) ? data[0] : data);
   }
 }
@@ -313,9 +338,15 @@ let lastHtml = "";       // render() swaps the DOM only when the picture changed
 let pendingCode = (() => {
   const q = new URLSearchParams(location.search);
   let code = R.parseSiteCode(q.get("code") ?? "");
+  // 🚨 Whatever a login link could carry (a ?code= that is not a sign's, a token, an #access_token) leaves the address
+  // and the history at once, never read: nothing here signs in from a link (audit 01-11-26 W-h3).
+  const AUTH_KEYS = ["code", "token", "token_hash", "type", "error", "error_code", "error_description"];
+  const authHash = /(^#|&)(access_token|refresh_token|provider_token|token_hash|error_description)=/.test(location.hash);
+  if (AUTH_KEYS.some((k) => q.has(k)) || authHash) {
+    AUTH_KEYS.forEach((k) => q.delete(k));
+    history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : "") + (authHash ? "" : location.hash));
+  }
   if (code) {
-    q.delete("code");
-    history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q.toString() : "") + location.hash);
     try { sessionStorage.setItem("crew.code", code); } catch { /* fine without */ }
   } else {
     try { code = R.parseSiteCode(sessionStorage.getItem("crew.code") ?? ""); } catch { code = null; }
@@ -406,8 +437,11 @@ function startPolling() {
 
 /** The queue stays: this person's rows wait here for them to sign in again, and no one else's login sends them. */
 async function signedOut() {
+  flushGen++; // a flush still going stops at its next row: the rest wait for their maker (audit 01-11-26 W1)
   clearInterval(pollTimer);
   await api.signOut();
+  // A sign's code handed in the address was this person's to use: the next one to sign in is not offered it (W-h2).
+  dropCode();
   card.clear();
   view = null;
   screen = "signin";
@@ -420,20 +454,27 @@ async function signedOut() {
 
 // ---------------------------------------------------------------- the queue going up
 
+// Bumped by every sign-out, so a flush that is still going can tell (audit 01-11-26 W1).
+let flushGen = 0;
+
 async function flush() {
   if (flushing || DEMO && !navigator.onLine) return;
   flushing = true;
+  const gen = flushGen;
   try {
     // 🚨 Only the signed-in person's rows, under their own login and no other (R.toSend): before 15-10-26 every row
     // went up under whoever was signed in, so A's clock in saved with no signal became B's once B signed in on the
     // same phone. The login is read again here, not trusted from the card: another tab of this browser can sign
     // someone else in, and the server records an event as the LOGIN's person, whoever's row it was.
-    const s = await api.session().catch(() => null);
-    const me = view?.me?.id;
-    if (!s || !me || s.user?.id !== view.uid) return;
+    // 🚨 Read again before EVERY row, and the row sent with that very token (audit 01-11-26 W1): read once before the
+    // loop, a sign-out or a sign-in while one row was still going sent the rest as the next person, or as no one.
+    const me = view?.me?.id, uid = view?.uid;
+    if (!me || !uid) return;
     const rows = R.toSend(await Q.all(), me);
     let offline = false;
     for (const r of rows) {
+      const s = await api.session().catch(() => null);
+      if (gen !== flushGen || !s || s.user?.id !== uid) break; // signed out, or someone else in: the rest wait for their maker
       offline = R.asOffline(Date.now() - r.atMillis, offline);
       const params = {
         p_kind: r.kind,
@@ -446,10 +487,12 @@ async function flush() {
       };
       if (offline) params.p_device_now = new Date().toISOString();
       try {
-        const ev = await api.clock(params);
-        if (view && ev && !view.events.some((e) => e.id === ev.id)) { view.events.push(ev); card.write(view); }
+        const ev = await api.clock(params, s.access_token);
+        // It went up as its maker. Shown only if the screen is still theirs: a sign-out may have come while it went.
+        if (gen === flushGen && view?.me?.id === me && ev && !view.events.some((e) => e.id === ev.id)) { view.events.push(ev); card.write(view); }
         await Q.remove(r.id);
       } catch (e) {
+        if (gen !== flushGen) break; // signed out while it was going: kept for its maker, never filed as refused
         if (R.isRefusal(e?.code)) { r.refused = e.message || T.refused; await Q.update(r); continue; }
         break; // keep it, and the rest behind it: order must hold
       }
@@ -689,8 +732,9 @@ async function act(name, el) {
       return;
     }
     case "reset": {
-      const code = val("code"), p1 = document.getElementById("p1")?.value ?? "", p2 = document.getElementById("p2")?.value ?? "";
-      if (code.length !== 6 || p1.length < 8 || p1 !== p2) return;
+      // 6 to 10 digits: the length is Supabase's "Email OTP Length" setting (31-10-26 it sent 8 and the app cut them to 6).
+      const code = val("code").replace(/\D/g, ""), p1 = document.getElementById("p1")?.value ?? "", p2 = document.getElementById("p2")?.value ?? "";
+      if (code.length < 6 || code.length > 10 || p1.length < 8 || p1 !== p2) return;
       busy = true; msg = null; render();
       try { await api.reset(resetEmail, code, p1); busy = false; screen = "loading"; render(); await refresh(); startPolling(); }
       catch (e) { busy = false; msg = { tone: "bad", text: plain(e) }; render(); }
@@ -808,7 +852,7 @@ function resetHtml() {
   return `<div class="hero"><div class="kicker">${esc(APP_NAME)}</div><div class="big">${esc(T.resetTitle)}</div><div class="line">${esc(T.resetLine)}</div></div>
   <div class="card">
     ${notice(msg)}
-    <label for="code">${esc(T.codeFromEmail)}</label><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="${esc(T.sixDigits)}">
+    <label for="code">${esc(T.codeFromEmail)}</label><input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="${esc(T.codeHint)}">
     <label for="p1">${esc(T.newPassword)}</label><input id="p1" type="password" autocomplete="new-password" placeholder="${esc(T.atLeast)}">
     <label for="p2">${esc(T.newPasswordAgain)}</label><input id="p2" type="password" autocomplete="new-password">
     <div class="row"><button class="btn primary" data-act="reset" ${busy ? "disabled" : ""}>${esc(busy ? T.oneMoment : T.setPassword)}</button></div>
@@ -921,4 +965,6 @@ document.addEventListener("keydown", (e) => {
 // The running figure ticks, as the app's does.
 setInterval(() => { if (screen === "home" && !sheet) render(); }, 30000);
 
-start();
+// 🚨 Never inside another site's frame, where a hidden page could take a worker's taps (audit 01-11-26 W-h5): the CSP
+// is a meta tag, which cannot say frame-ancestors, so the page itself declines.
+if (window.top === window.self) start();

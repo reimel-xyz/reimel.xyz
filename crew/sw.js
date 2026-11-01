@@ -8,8 +8,10 @@
 // offline. Then bump the name: the new worker's install copies the whole list in one go (addAll is all or nothing)
 // and throws the old copy away. v2 (15-10-26): the jsDelivr copies dropped. v3 (15-10-26): the per-person queue,
 // app.js and rules.js together. v4 (27-10-26): Delete my account, app.js with index.html's new red button style. The
-// queue and the card live elsewhere and are never touched by a bump.
-const SHELL = "crew-web-v4";
+// queue and the card live elsewhere and are never touched by a bump. v5 (01-11-26, audit W-h4): copies are kept by
+// address WITHOUT its ?search, so a scanned sign's ?code= no longer leaves a cached page holding that code; the bump
+// throws away v4, which had some.
+const SHELL = "crew-web-v5";
 const FILES = [
   "./",
   "./index.html",
@@ -37,10 +39,11 @@ self.addEventListener("fetch", (event) => {
   if (url.hostname.endsWith(".supabase.co")) return;
   if (event.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
+  const key = url.origin + url.pathname; // read and written by the bare address: one copy per file, no codes in it
   event.respondWith(
-    caches.match(event.request, { ignoreSearch: true }).then((hit) => {
+    caches.match(key).then((hit) => {
       const fresh = fetch(event.request).then((res) => {
-        if (res.ok) caches.open(SHELL).then((c) => c.put(event.request, res.clone()));
+        if (res.ok) caches.open(SHELL).then((c) => c.put(key, res.clone()));
         return res;
       });
       if (hit) { event.waitUntil(fresh.catch(() => {})); return hit; }
