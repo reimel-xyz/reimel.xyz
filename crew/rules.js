@@ -5,6 +5,8 @@
 //   SiteCode.parse   -> parseSiteCode(text)
 //   Outbox.asOffline / Net.isRefusal -> asOffline(ageMs, earlierWentOffline), isRefusal(code)
 //   ClockQueue.waiting(personId) -> toSend(rows, personId)  (and rowsOf, claimLegacy, unclaimed: the queue's owner)
+//   Clocking.undoFinishProblem (Home's ten minutes) -> undoableFinish(events, nowMs)
+//   SignInScreen's reset button and plain() -> resetProblem(code, p1, p2), authProblem(error)
 // Pure functions, no DOM, no network: `node --test test/rules.test.mjs test/queue.test.mjs` runs them on the PC.
 
 export const KIND = ["IN", "BREAK_START", "BREAK_END", "OUT"];
@@ -17,6 +19,10 @@ export const FUTURE_GRACE_MS = 120 * 1000;
 export const MAX_USEFUL_ACCURACY_METRES = 500;
 /** A row sent within this of its tap goes up as a LIVE event with the server's time; older, as recorded offline (Outbox.LIVE_MS). */
 export const LIVE_MS = 20 * 1000;
+/** A finish pressed by mistake can be taken back on Home for this long (Clocking.UNDO_FINISH_WINDOW, server 0012). */
+export const UNDO_FINISH_MS = 10 * 60 * 1000;
+/** The reset code is 6 to 10 digits, whatever Supabase's "Email OTP Length" is set to (31-10-26); a password at least 8. */
+export const RESET_CODE_MIN = 6, RESET_CODE_MAX = 10, MIN_PASSWORD = 8;
 
 const ORDER = (a, b) => a.atMillis - b.atMillis || KIND.indexOf(a.kind) - KIND.indexOf(b.kind) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
@@ -118,6 +124,46 @@ export function parseSiteCode(text) {
   else candidate = trimmed;
   candidate = candidate.toUpperCase();
   return candidate.length === 10 && [...candidate].every((c) => CODE_ALPHABET.includes(c)) ? candidate : null;
+}
+
+/**
+ * The finish Home offers to take back with "Carry on working" (03-11-26, as the app's Home): the person's LAST event is
+ * a finish, with a clock in before it, pressed no more than ten minutes ago. Otherwise null. The server's undo_finish
+ * (0012) checks again and has the last word (a finish a manager typed in, a clock in after it).
+ */
+export function undoableFinish(events, nowMs) {
+  const known = [...events].filter((e) => e.atMillis <= nowMs + FUTURE_GRACE_MS).sort(ORDER);
+  const last = known[known.length - 1];
+  if (!last || last.kind !== "OUT") return null;
+  if (!known.some((e) => e.kind === "IN" && e.atMillis <= last.atMillis)) return null;
+  return nowMs - last.atMillis <= UNDO_FINISH_MS ? last : null;
+}
+
+/** What stops "Set the new password": "code", "short", "mismatch", or null (the app keeps its button off until none). */
+export function resetProblem(code, p1, p2) {
+  const digits = String(code ?? "").replace(/\D/g, "");
+  if (digits.length < RESET_CODE_MIN || digits.length > RESET_CODE_MAX) return "code";
+  if (String(p1 ?? "").length < MIN_PASSWORD) return "short";
+  if (p1 !== p2) return "mismatch";
+  return null;
+}
+
+/**
+ * Which plain sentence a sign-in, code or password error gets (SignInScreen.plain), as a key the page has words for, or
+ * null for the server's own sentence. 🚨 Supabase answers a mistyped code AND an expired one with the same "Token has
+ * expired or is invalid" (otp_expired), so its sentence must cover both. The short-password message comes before the
+ * weak-password code because Supabase gives a short password that code too.
+ */
+export function authProblem(e) {
+  const m = String(e?.message ?? e ?? ""), code = String(e?.code ?? "");
+  if (/Invalid login credentials/i.test(m)) return "wrongLogin";
+  if (/Email not confirmed/i.test(m)) return "notConfirmed";
+  if (code === "otp_expired" || /Token has expired|invalid.*otp|otp.*invalid/i.test(m)) return "badCode";
+  if (/Password should be at least/i.test(m)) return "shortPassword";
+  if (code === "weak_password" || e?.name === "AuthWeakPasswordError") return "weakPassword";
+  if (/rate_limit/i.test(code) || e?.status === 429 || /rate limit|For security purposes/i.test(m)) return "tooMany";
+  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) return "noSignal";
+  return null;
 }
 
 /** Once one row in a flush has gone up as offline, the rest do too: order must hold on the server. */

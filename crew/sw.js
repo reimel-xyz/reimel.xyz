@@ -10,8 +10,9 @@
 // app.js and rules.js together. v4 (27-10-26): Delete my account, app.js with index.html's new red button style. The
 // queue and the card live elsewhere and are never touched by a bump. v5 (01-11-26, audit W-h4): copies are kept by
 // address WITHOUT its ?search, so a scanned sign's ?code= no longer leaves a cached page holding that code; the bump
-// throws away v4, which had some.
-const SHELL = "crew-web-v5";
+// throws away v4, which had some. v6 (03-11-26): app.js calls rules.js's new undoableFinish, resetProblem and
+// authProblem, and index.html's new undo row style.
+const SHELL = "crew-web-v6";
 const FILES = [
   "./",
   "./index.html",

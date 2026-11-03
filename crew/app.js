@@ -38,12 +38,21 @@ const T = {
   newPasswordAgain: "New password again",
   atLeast: "At least 8 characters",
   mismatch: "The two passwords don't match.",
+  // What stops "Set the new password" (R.resetProblem, 03-11-26): until then the button did nothing and said nothing.
+  resetCode: "Type the whole code from the email.",
+  resetShort: "The new password needs at least 8 characters.",
   setPassword: "Set the new password and sign in",
   sendAgain: "Send the code again",
   codeSent: "If that email has a login, a code is on its way to it. It works for an hour.",
   wrongLogin: "That email and password don't match. Check both, or use \"I've forgotten my password\".",
   notConfirmed: "Confirm your email first: open the link in the email you were sent, then sign in.",
   noSignal: "No connection. Check the signal and try again.",
+  // The app's words for the server's errors (SignInScreen.plain), R.authProblem picks one (03-11-26). One sentence for a
+  // wrong code and an old one: Supabase says the same for both.
+  badCode: "That code is wrong or too old. Check it, or send a new one.",
+  shortPassword: "The password is too short.",
+  weakPassword: "Choose a stronger password: longer, and not one that's easy to guess.",
+  tooMany: "Too many tries. Wait a minute, then try again.",
   noTeam: "This login isn't on a team yet. Ask your boss for an invite code and join from the Crew+ app on an Android phone.",
   reading: "Reading your company...",
   home: "HOME",
@@ -60,6 +69,13 @@ const T = {
   takeBreak: "Take break",
   endBreak: "End break",
   finish: "Finish shift",
+  // The finish asks first, and can be taken back for ten minutes (03-11-26): the app's HomeScreen words.
+  finishAsk: "Finish your shift?",
+  finishAt: (time) => `You'll be clocked out at ${time}.`,
+  finishYes: "Finish",
+  notYet: "Not yet",
+  finishedAt: (time) => `Finished at ${time}. Pressed it by mistake?`,
+  carryOn: "Carry on working",
   sheetTitle: "Clock in",
   sheetLine: "Scan the QR code on the sign at work.",
   scan: "Scan the code",
@@ -221,6 +237,11 @@ class SupabaseApi {
     if (!res.ok) throw { code: data?.code, message: data?.message ?? `The server answered ${res.status}.` };
     return rowToEvent(Array.isArray(data) ? data[0] : data);
   }
+  /** "Carry on working" (03-11-26): undo_finish (0012) removes the finish and leaves the trail on the clock in. */
+  async undoFinish(eventId) {
+    const { error } = await this.client.rpc("undo_finish", { p_out_event: eventId });
+    if (error) throw error;
+  }
 }
 
 /**
@@ -270,6 +291,16 @@ class DemoApi {
     const ev = { id: p.p_client_id, kind: p.p_kind, atMillis: p.p_offline ? Date.parse(p.p_device_time) : Date.now(), siteCheck: proved, location: located ? (p.p_location ?? "UNAVAILABLE") : "UNAVAILABLE", recordedOffline: !!p.p_offline };
     this.rows.push({ ...ev, personId });
     return ev;
+  }
+  /** As undo_finish (0012) for the worker's own finish: their last event, under ten minutes old. */
+  async undoFinish(eventId) {
+    await this.wait();
+    const personId = this.person().id;
+    const mine = this.rows.filter((r) => r.personId === personId).sort((a, b) => a.atMillis - b.atMillis);
+    const last = mine[mine.length - 1];
+    if (!last || last.id !== eventId || last.kind !== "OUT") throw { code: "P0001", message: "That finish no longer exists." };
+    if (Date.now() - last.atMillis > R.UNDO_FINISH_MS) throw { code: "P0001", message: "It's too late to undo that finish here. Ask for the times to be put right." };
+    this.rows = this.rows.filter((r) => r !== last);
   }
 }
 
@@ -325,12 +356,19 @@ let note = null;         // a short line on Home after a tap
 let view = null;         // { me, company, sites, events, email, uid }
 let queue = [];
 let sheet = false;
+let sheetAt = 0;         // when a sheet opened: the second tap of a double tap lands on its backdrop and must not close it
+let finishAsk = false;   // "Finish your shift?" is up (03-11-26)
+let tapping = false;     // a clock tap is being saved: the clock buttons wait, so a double tap is one tap (03-11-26)
 let photoOffer = false;  // the live camera was refused on this device: the sheet also offers a photo of the sign
 let scanning = null;     // { stream, wrap, timer, started }
 let flushing = false;
 let resetEmail = "";
 let pollTimer = null;
 let lastHtml = "";       // render() swaps the DOM only when the picture changed: a swap under a thumb loses the tap
+// "Carry on working" needs the server's id for a finish that went up (the queue row's id is the phone's): row id to it.
+const landed = new Map();
+// Finishes taken back: kept out of a read that started before the undo landed, or the finish would reappear.
+const undone = new Set();
 
 // A code handed in the address: an old sign's link (https://reimel.xyz/clock/<code>) opened by the phone's own camera
 // app or any QR reader, sent here by the site's 404 page as ?code=. Offered as "Clock in at this sign" once signed in,
@@ -415,7 +453,7 @@ async function refresh(session) {
     if (!me) { screen = "noteam"; view = { email: s.user.email }; card.clear(); render(); return; }
     const [company, sites] = await Promise.all([api.company(), api.sites()]);
     const since = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString();
-    const events = await api.events(me.id, since);
+    const events = (await api.events(me.id, since)).filter((e) => !undone.has(e.id));
     // uid: the login this person was read under, which a flush checks against the login it is about to send with.
     view = { me, company, sites, events, email: s.user.email, uid: s.user.id };
     card.write(view);
@@ -449,6 +487,7 @@ async function signedOut() {
   // The last tap's line ("Saved on this phone...") is about this person: the next one to sign in must not see it.
   note = null;
   sheet = false;
+  finishAsk = false;
   render();
 }
 
@@ -488,6 +527,7 @@ async function flush() {
       if (offline) params.p_device_now = new Date().toISOString();
       try {
         const ev = await api.clock(params, s.access_token);
+        if (ev?.id) landed.set(r.id, ev.id);
         // It went up as its maker. Shown only if the screen is still theirs: a sign-out may have come while it went.
         if (gen === flushGen && view?.me?.id === me && ev && !view.events.some((e) => e.id === ev.id)) { view.events.push(ev); card.write(view); }
         await Q.remove(r.id);
@@ -504,20 +544,34 @@ async function flush() {
   }
 }
 
+/** A double tap lands its second tap within this; the clock buttons stay off at least this long after a tap. */
+const TAP_HOLD_MS = 800;
+
 async function tap(kind, extra = {}) {
   // The row is the signed-in person's from the moment it exists, and only their flush sends it (R.toSend).
   const personId = view?.me?.id;
   if (!personId) return; // Home is drawn only for a known person, so a tap without one has nowhere to belong
-  const row = { id: uuid(), kind, atMillis: Date.now(), queuedAt: Date.now(), ...extra, personId };
-  await Q.add(row);
-  queue = await Q.all();
-  render();
-  const sending = flush();
-  // Waited for BRIEFLY, only to choose an honest sentence; the screen already shows the tap.
-  await Promise.race([sending, new Promise((r) => setTimeout(r, 3000))]);
-  const still = queue.find((q) => q.id === row.id);
-  note = still ? (still.refused ? still.refused : T.savedOffline) : (kind === "IN" ? T.clockedIn : null);
-  render();
+  // 🚨 One clock tap at a time (03-11-26): a double tap on Take break queued two break starts, the server refused the
+  // second, and the worker read "You're not clocked in." under ON A BREAK. A second tap landing on the NEW button
+  // (End break, in the same place) would have ended the break. The buttons are drawn off while this runs.
+  if (tapping) return;
+  tapping = true;
+  const started = Date.now();
+  try {
+    const row = { id: uuid(), kind, atMillis: Date.now(), queuedAt: Date.now(), ...extra, personId };
+    await Q.add(row);
+    queue = await Q.all();
+    render();
+    const sending = flush();
+    // Waited for BRIEFLY, only to choose an honest sentence; the screen already shows the tap.
+    await Promise.race([sending, new Promise((r) => setTimeout(r, 3000))]);
+    const still = queue.find((q) => q.id === row.id);
+    note = still ? (still.refused ? still.refused : T.savedOffline) : (kind === "IN" ? T.clockedIn : null);
+  } finally {
+    await new Promise((r) => setTimeout(r, Math.max(0, TAP_HOLD_MS - (Date.now() - started))));
+    tapping = false;
+    render();
+  }
 }
 
 // ---------------------------------------------------------------- clock in and finish: sign, location, queue
@@ -570,6 +624,41 @@ async function finishWith() {
   if (location === null) { note = T.locationNeeded("finish"); render(); return; }
   await tap("OUT", { method: "BUTTON", location, atMillis: at });
   if (!note && location !== "INSIDE") { note = T.finishChecked(view?.me?.role); render(); }
+}
+
+/**
+ * "Carry on working" (03-11-26, the app's undo; rules in R.undoableFinish and server 0012): a finish pressed by mistake,
+ * taken back within ten minutes. Still WAITING on this phone, the row is simply removed and the server never hears of
+ * it; already on the server, undo_finish removes it and leaves the trail on the clock in. 🚨 Decided with the queue held
+ * (flushing), as the app decides under its flush lock: a send may be carrying that very row up, and a row removed here
+ * just after it landed would leave a finish on the server that this phone believes it took back.
+ */
+async function undoFinish(id) {
+  if (busy || tapping || !id || !view?.me) return;
+  busy = true; note = null; render();
+  while (flushing) await new Promise((r) => setTimeout(r, 100));
+  flushing = true;
+  let words = null;
+  try {
+    const waiting = R.toSend(await Q.all(), view.me.id).some((r) => r.id === id);
+    if (waiting) {
+      await Q.remove(id);
+    } else {
+      const serverId = landed.get(id) ?? id;
+      await api.undoFinish(serverId);
+      undone.add(serverId);
+      view.events = view.events.filter((e) => e.id !== serverId);
+      card.write(view);
+    }
+  } catch (e) {
+    words = /Failed to fetch|NetworkError|Load failed|network/i.test(String(e?.message ?? "")) ? T.noSignal : String(e?.message ?? "").slice(0, 160) || T.noSignal;
+  } finally {
+    flushing = false;
+    busy = false;
+    queue = await Q.all().catch(() => queue);
+    note = words;
+    render();
+  }
 }
 
 async function openScanner() {
@@ -734,13 +823,14 @@ async function act(name, el) {
     case "reset": {
       // 6 to 10 digits: the length is Supabase's "Email OTP Length" setting (31-10-26 it sent 8 and the app cut them to 6).
       const code = val("code").replace(/\D/g, ""), p1 = document.getElementById("p1")?.value ?? "", p2 = document.getElementById("p2")?.value ?? "";
-      if (code.length < 6 || code.length > 10 || p1.length < 8 || p1 !== p2) return;
+      const problem = R.resetProblem(code, p1, p2);
+      if (problem) { msg = { tone: "bad", text: { code: T.resetCode, short: T.resetShort, mismatch: T.mismatch }[problem] }; render(); return; }
       busy = true; msg = null; render();
       try { await api.reset(resetEmail, code, p1); busy = false; screen = "loading"; render(); await refresh(); startPolling(); }
       catch (e) { busy = false; msg = { tone: "bad", text: plain(e) }; render(); }
       return;
     }
-    case "clock-in": sheet = true; note = null; render(); return;
+    case "clock-in": if (!busy && !tapping) { sheet = true; sheetAt = Date.now(); note = null; render(); } return;
     case "sheet-close": sheet = false; dropCode(); render(); return;
     case "clock-in-code": { const c = pendingCode; dropCode(); if (c) await clockInWith(c, "QR"); return; }
     case "scan": sheet = false; render(); await openScanner(); return;
@@ -748,7 +838,11 @@ async function act(name, el) {
     case "cant-scan": closeScanner(); await clockInWith(null, "NONE"); return;
     case "break": await tap("BREAK_START"); return;
     case "break-end": await tap("BREAK_END"); return;
-    case "finish": if (!busy) await finishWith(); return;
+    // The finish asks first, as the app's Home does (03-11-26): one tap no longer ends a shift.
+    case "finish": if (!busy && !tapping) { finishAsk = true; sheetAt = Date.now(); note = null; render(); } return;
+    case "finish-no": finishAsk = false; render(); return;
+    case "finish-yes": finishAsk = false; if (!busy && !tapping) await finishWith(); else render(); return;
+    case "undo-finish": await undoFinish(el.dataset.id); return;
     case "dismiss": {
       // Only a row this person is shown: their own refused one, or an unclaimed one (R.unclaimed).
       const row = queue.find((q) => q.id === el.dataset.id);
@@ -791,11 +885,9 @@ async function act(name, el) {
 }
 
 function plain(e) {
-  const m = String(e?.message ?? e ?? "");
-  if (/Invalid login credentials/i.test(m)) return T.wrongLogin;
-  if (/Email not confirmed/i.test(m)) return T.notConfirmed;
-  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) return T.noSignal;
-  return m.slice(0, 160) || T.noSignal;
+  const key = R.authProblem(e);
+  if (key) return T[key];
+  return String(e?.message ?? e ?? "").slice(0, 160) || T.noSignal;
 }
 
 // ---------------------------------------------------------------- drawing
@@ -803,8 +895,10 @@ function plain(e) {
 function render() {
   // A code from the address opens the sheet by itself, once signed in and not clocked in; otherwise it no longer applies.
   if (pendingCode && screen === "home" && !busy && !sheet) {
-    if (R.state(effectiveEvents(), Date.now()) === "NOT_WORKING") sheet = true; else dropCode();
+    if (R.state(effectiveEvents(), Date.now()) === "NOT_WORKING") { sheet = true; sheetAt = Date.now(); } else dropCode();
   }
+  // "Finish your shift?" only while there is a shift to finish (a finish from another phone may have landed meanwhile).
+  if (finishAsk && (screen !== "home" || R.state(effectiveEvents(), Date.now()) === "NOT_WORKING")) finishAsk = false;
   let html = "";
   if (DEMO) html += `<div class="demo">${esc(T.demo)}</div>`;
   if (screen === "loading") html += `<div class="card"><p class="muted">${esc(T.reading)}</p></div>`;
@@ -815,6 +909,7 @@ function render() {
   else if (screen === "delete") html += deleteHtml();
   else html += homeHtml();
   if (sheet) html += sheetHtml();
+  else if (finishAsk) html += finishSheetHtml();
   // Keep what was typed: the sign-in screens re-render only on a message or a busy change, so values are restored.
   const typed = {};
   ["email", "password", "code", "p1", "p2", "delpw"].forEach((id) => { const e = document.getElementById(id); if (e) typed[id] = e.value; });
@@ -876,10 +971,15 @@ function homeHtml() {
   const refused = mine.filter((r) => r.refused);
   const strays = R.unclaimed(queue);
   const what = (r) => `${T.kinds[r.kind] ?? r.kind}, ${fmtDay.format(new Date(r.atMillis))} ${fmtTime.format(new Date(r.atMillis))}`;
+  // Off while a location is read or a tap is being saved (03-11-26): a second tap must not become a second event.
+  const off = busy || tapping ? "disabled" : "";
   let tile;
   if (st === "NOT_WORKING") {
+    // The undo sits where Finish was, for ten minutes, as on the app's Home (R.undoableFinish; server 0012).
+    const undo = R.undoableFinish(events, now);
     tile = `<div class="state"><span class="dot"></span>${esc(T.notClockedIn)}</div><h1>${esc(T.hi(first))}</h1>
-      <div class="row"><button class="btn primary" data-act="clock-in" ${busy ? "disabled" : ""}>${esc(T.clockIn)}</button></div>`;
+      ${undo ? `<div class="row undo"><p class="small">${esc(T.finishedAt(fmtTime.format(new Date(undo.atMillis))))}</p><button class="btn tonal" data-act="undo-finish" data-id="${esc(undo.id)}" ${off}>${esc(T.carryOn)}</button></div>` : ""}
+      <div class="row"><button class="btn primary" data-act="clock-in" ${off}>${esc(T.clockIn)}</button></div>`;
   } else {
     const onBreak = st === "ON_BREAK";
     const soFar = open ? R.workedSoFarMinutes(open, now) : 0;
@@ -887,7 +987,7 @@ function homeHtml() {
     tile = `<div class="state ${onBreak ? "warn" : "good"}"><span class="dot"></span>${esc(onBreak ? T.onBreak : T.onShift)}</div>
       <div class="figure">${esc(R.hoursText(soFar))}</div><p class="muted">${esc(T.workedSoFar)}</p>
       <div class="stats"><div class="stat"><div class="l">${esc(T.started)}</div><div class="v">${open ? esc(fmtTime.format(new Date(open.inMillis))) : ""}</div></div><div class="stat"><div class="l">${esc(T.breaks)}</div><div class="v">${esc(breaksText)}</div></div></div>
-      <div class="row"><button class="btn tonal" data-act="${onBreak ? "break-end" : "break"}">${esc(onBreak ? T.endBreak : T.takeBreak)}</button><button class="btn primary" data-act="finish">${esc(T.finish)}</button></div>`;
+      <div class="row"><button class="btn tonal" data-act="${onBreak ? "break-end" : "break"}" ${off}>${esc(onBreak ? T.endBreak : T.takeBreak)}</button><button class="btn primary" data-act="finish" ${off}>${esc(T.finish)}</button></div>`;
   }
   return `<div class="hero"><div class="kicker"><span>${esc(T.home)} · ${esc(fmtDay.format(new Date(now)).toUpperCase())}</span><span class="face" aria-label="${esc(view?.me?.name ?? "")}">${esc(initial)}</span></div>
     <div class="big">${esc(R.hoursText(weekMinutes))}</div><div class="line">${esc(T.workedWeek)}</div></div>
@@ -944,10 +1044,18 @@ function sheetHtml() {
     <p class="small muted">${esc(T.cantScanNote)}</p></div></div>`;
 }
 
+/** "Finish your shift?" (03-11-26), the app's question: the time is now, and Finish records the moment it is tapped. */
+function finishSheetHtml() {
+  return `<div class="sheet-back" data-act="finish-no"><div class="sheet"><h2>${esc(T.finishAsk)}</h2><p>${esc(T.finishAt(fmtTime.format(new Date())))}</p>
+    <div class="row"><button class="btn primary" data-act="finish-yes">${esc(T.finishYes)}</button></div>
+    <div class="row"><button class="btn text" data-act="finish-no">${esc(T.notYet)}</button></div></div></div>`;
+}
+
 document.addEventListener("click", (e) => {
   const a = e.target.closest("[data-act]");
   if (!a) return;
-  if (a.classList.contains("sheet-back") && e.target !== a) return;
+  // The backdrop closes a sheet, but not on the second tap of the double tap that opened it (03-11-26).
+  if (a.classList.contains("sheet-back") && (e.target !== a || Date.now() - sheetAt < TAP_HOLD_MS)) return;
   act(a.dataset.act, a);
 });
 document.addEventListener("change", (e) => {
@@ -963,7 +1071,7 @@ document.addEventListener("keydown", (e) => {
   else if (screen === "reset") act("reset");
 });
 // The running figure ticks, as the app's does.
-setInterval(() => { if (screen === "home" && !sheet) render(); }, 30000);
+setInterval(() => { if (screen === "home" && !sheet && !finishAsk) render(); }, 30000);
 
 // 🚨 Never inside another site's frame, where a hidden page could take a worker's taps (audit 01-11-26 W-h5): the CSP
 // is a meta tag, which cannot say frame-ancestors, so the page itself declines.
