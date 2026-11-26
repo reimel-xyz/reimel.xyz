@@ -213,7 +213,7 @@ class SupabaseApi {
     if (error) throw error;
     return (data ?? []).find((p) => p) ?? null;
   }
-  async company() { const { data, error } = await this.client.from("companies").select("id, name, plan").limit(1); if (error) throw error; return data?.[0] ?? null; }
+  async company() { const { data, error } = await this.client.from("companies").select("*").limit(1); if (error) throw error; return data?.[0] ?? null; }
   async sites() { const { data, error } = await this.client.from("sites").select("id, name, latitude, longitude, radius_metres"); if (error) throw error; return (data ?? []).map((s) => ({ id: s.id, name: s.name, latitude: s.latitude, longitude: s.longitude, radiusMetres: s.radius_metres })); }
   async events(personId, sinceIso) {
     const { data, error } = await this.client.from("clock_events").select("id, kind, at, site_check, location, recorded_offline").eq("person_id", personId).gte("at", sinceIso).order("at").limit(1000);
@@ -271,7 +271,7 @@ class DemoApi {
   async sendReset() { await this.wait(); }
   async reset() { await this.wait(); this.login("alex@example.com"); }
   async me() { await this.wait(); return this.person(); }
-  async company() { return { id: "demo-co", name: "Waves Car Wash (demo)", plan: "clock" }; }
+  async company() { return { id: "demo-co", name: "Waves Car Wash (demo)", plan: "clock", time_zone: "Europe/London" }; }
   async sites() { return [this.site]; }
   async events(personId) { return this.rows.filter((r) => r.personId === personId).map(({ personId: _, ...e }) => e); }
   async clock(p) {
@@ -395,8 +395,20 @@ function dropCode() { pendingCode = null; try { sessionStorage.removeItem("crew.
 
 const app = document.getElementById("app");
 const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => { const r = (Math.random() * 16) | 0; return (c === "x" ? r : (r & 0x3) | 0x8).toString(16); }));
-const fmtDay = new Intl.DateTimeFormat("en-GB", { timeZone: ZONE, weekday: "short", day: "numeric", month: "short" });
-const fmtTime = new Intl.DateTimeFormat("en-GB", { timeZone: ZONE, hour: "2-digit", minute: "2-digit", hour12: false });
+// The company's own time zone (server 0055, 26-11-26), London until the company row says otherwise. The day and the
+// clock times below are drawn in it; a name the browser doesn't know keeps the last good one.
+let zone = ZONE;
+let fmtDay = new Intl.DateTimeFormat("en-GB", { timeZone: zone, weekday: "short", day: "numeric", month: "short" });
+let fmtTime = new Intl.DateTimeFormat("en-GB", { timeZone: zone, hour: "2-digit", minute: "2-digit", hour12: false });
+function useZone(z) {
+  const next = z || ZONE;
+  if (next === zone) return;
+  try {
+    fmtDay = new Intl.DateTimeFormat("en-GB", { timeZone: next, weekday: "short", day: "numeric", month: "short" });
+    fmtTime = new Intl.DateTimeFormat("en-GB", { timeZone: next, hour: "2-digit", minute: "2-digit", hour12: false });
+    zone = next;
+  } catch { /* an unknown zone: keep the last good one */ }
+}
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.MSStream;
 const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
@@ -434,6 +446,7 @@ async function start() {
   const cached = card.read();
   if (cached && cached.me) {
     view = cached;
+    useZone(cached.company?.time_zone);
     screen = "home";
     render();
   } else {
@@ -455,6 +468,7 @@ async function refresh(session) {
     const since = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString();
     const events = (await api.events(me.id, since)).filter((e) => !undone.has(e.id));
     // uid: the login this person was read under, which a flush checks against the login it is about to send with.
+    useZone(company?.time_zone);
     view = { me, company, sites, events, email: s.user.email, uid: s.user.id };
     card.write(view);
     screen = "home";
@@ -482,6 +496,7 @@ async function signedOut() {
   dropCode();
   card.clear();
   view = null;
+  useZone(null);
   screen = "signin";
   msg = null;
   // The last tap's line ("Saved on this phone...") is about this person: the next one to sign in must not see it.
@@ -961,8 +976,8 @@ function homeHtml() {
   const st = R.state(events, now);
   const sess = R.sessions(events);
   const open = sess.find((s) => s.outMillis === null && now <= s.inMillis + R.NO_ROTA_LIMIT_MS);
-  const weekStart = R.weekStartIso(now, ZONE);
-  const weekMinutes = sess.filter((s) => s.outMillis !== null && R.dayIso(s.inMillis, ZONE) >= weekStart).reduce((a, s) => a + R.workedMinutes(s), 0);
+  const weekStart = R.weekStartIso(now, zone);
+  const weekMinutes = sess.filter((s) => s.outMillis !== null && R.dayIso(s.inMillis, zone) >= weekStart).reduce((a, s) => a + R.workedMinutes(s), 0);
   const first = (view?.me?.name ?? "").split(" ")[0] || "there";
   const initial = first.slice(0, 1).toUpperCase();
   // This person's rows only: another person's wait on this phone with nothing of them shown (R.rowsOf).
